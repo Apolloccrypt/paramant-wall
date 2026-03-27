@@ -1239,10 +1239,12 @@ app.post('/api/gdpr/delete', async function(req, res) {
   // Rate limit: max 3 per uur per IP
   const gdprIp = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
   const gdprKey = 'gdpr_rl:' + require('crypto').createHash('sha256').update(gdprIp).digest('hex').slice(0,16);
-  const gdprCount = parseInt(await redis.get(gdprKey).catch(function(){ return 0; })) || 0;
-  if (gdprCount >= 3) logSecurityEvent('rate_limit_hit', {}).catch(function(){});
-  return res.status(429).json({ error: 'rate_limit', retry_after: 3600 });
-  await redis.setEx(gdprKey, 3600, String(gdprCount + 1)).catch(function(){});
+  const gdprCount = parseInt(await redisGet(gdprKey) || 0) || 0;
+  if (gdprCount >= 3) {
+    logSecurityEvent('rate_limit_hit', {}).catch(function(){});
+    return res.status(429).json({ error: 'rate_limit', retry_after: 3600 });
+  }
+  await redisSet(gdprKey, String(gdprCount + 1), 3600);
   const { email, apiKey } = req.body || {};
   if (!email && !apiKey) return res.status(400).json({ error: 'email_or_key_required' });
   try {
@@ -1255,19 +1257,40 @@ app.post('/api/gdpr/delete', async function(req, res) {
       const r = await pg.query('SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL LIMIT 1', [email]);
       if (r.rows.length) userId = r.rows[0].id;
     }
-    if (!userId) return res.status(404).json({ error: 'not_found' });
-    // Soft delete - CASCADE verwijdert customers, projects, subscriptions etc.
-    await pg.query('UPDATE users SET deleted_at = NOW(), email = $1 WHERE id = $2',
-      ['deleted_' + require('crypto').randomBytes(8).toString('hex') + '@deleted', userId]);
-    await pg.query('UPDATE customers SET enabled = false WHERE user_id = $1', [userId]);
-    // GDPR audit trail (geen PII - alleen hash)
-    const userHash = require('crypto').createHash('sha256').update(userId).digest('hex').slice(0, 16);
-    await pg.query(
-      'INSERT INTO gdpr_deletions (id, user_hash, deleted_at, reason) VALUES (gen_random_uuid(), $1, NOW(), $2)',
-      [userHash, 'user_request']
-    ).catch(() => {});
-    // Verwijder Redis cache
-    redis.del('wk:' + userId).catch(() => {});
+    if (!userId) {
+      // Altijd zelfde response — geen account enumeration
+      return res.json({ ok: true, message: 'Als dit account bestaat, ontvang je een bevestigingsmail.' });
+    }
+
+    // Genereer bevestigingstoken — geldig 1 uur
+    const deleteToken = require('crypto').randomBytes(32).toString('hex');
+    const deleteTokenHash = sha256(deleteToken);
+    await redisSet('gdpr_confirm:' + deleteTokenHash, String(userId), 3600);
+
+    // Stuur bevestigingsmail
+    const confirmUrl = 'https://wall.paramant.app/api/gdpr/confirm?token=' + deleteToken;
+    const emailTo = email || '';
+    if (emailTo) {
+      const html = `
+        <div style="font-family:monospace;background:#0c0e10;color:#e2e4e8;padding:24px;max-width:480px">
+          <div style="font-size:11px;color:#5a6070;letter-spacing:.1em;margin-bottom:8px">// PARAMANT WALL</div>
+          <div style="font-size:16px;font-weight:800;color:#e2e4e8;margin-bottom:16px">Account verwijderen</div>
+          <p style="font-size:12px;color:#8a8e98;line-height:1.8;margin-bottom:20px">
+            We hebben een verzoek ontvangen om jouw account te verwijderen.<br>
+            <strong style="color:#f87171">Als jij dit niet was, doe dan niets. De link vervalt na 1 uur.</strong>
+          </p>
+          <a href="\${confirmUrl}" style="display:inline-block;padding:12px 24px;background:#f87171;color:#0c0e10;font-weight:800;font-size:12px;text-decoration:none;letter-spacing:.06em">
+            → BEVESTIG ACCOUNT VERWIJDERING
+          </a>
+          <p style="font-size:11px;color:#5a6070;margin-top:20px;line-height:1.7">
+            Na bevestiging worden alle gegevens permanent verwijderd.<br>
+            Je API key wordt direct ongeldig.<br>
+            Dit kan niet ongedaan gemaakt worden.
+          </p>
+        </div>
+      `;
+      await sendEmail(emailTo, 'PARAMANT WALL — Bevestig account verwijdering', html);
+    }
     return res.json({ ok: true, message: 'Account verwijderd. Alle persoonsgegevens zijn gewist.' });
   } catch(e) {
     console.error('[WALL] GDPR delete error:', e.code || e.message.slice(0, 50));
@@ -1379,6 +1402,56 @@ app.post('/api/auth/recover', async function(req, res) {
 
   // Altijd 200 (geen email enumeration)
   return res.json({ ok: true, message: 'Als dit e-mailadres bekend is, ontvang je een link.' });
+});
+
+// ── GDPR Delete bevestiging via token ───────────────────────────
+app.get('/api/gdpr/confirm', async function(req, res) {
+  const token = (req.query.token || '').trim();
+  if (!token || token.length < 32) {
+    return res.status(400).send('<h2>Ongeldige of verlopen link.</h2>');
+  }
+  const tokenHash = sha256(token);
+  const userId = await redisGet('gdpr_confirm:' + tokenHash);
+  if (!userId) {
+    return res.status(400).send(`
+      <html><body style="font-family:monospace;background:#0c0e10;color:#e2e4e8;padding:40px;text-align:center">
+        <h2 style="color:#f87171">[!] Link verlopen of al gebruikt.</h2>
+        <p style="color:#8a8e98;margin-top:12px">Dien een nieuw verwijderverzoek in als je account nog bestaat.</p>
+        <a href="/" style="color:#00ff9d">← Terug</a>
+      </body></html>
+    `);
+  }
+
+  try {
+    // Voer de echte delete uit
+    await pg.query('UPDATE users SET deleted_at = NOW(), email = $1 WHERE id = $2',
+      ['deleted_' + require('crypto').randomBytes(8).toString('hex') + '@deleted', userId]);
+    await pg.query('UPDATE customers SET enabled = false WHERE user_id = $1', [userId]);
+
+    // GDPR audit trail
+    const userHash = sha256(userId).slice(0, 16);
+    await pg.query(
+      'INSERT INTO gdpr_deletions (id, user_hash, deleted_at, reason) VALUES (gen_random_uuid(), $1, NOW(), $2)',
+      [userHash, 'user_confirmed']
+    ).catch(() => {});
+
+    // Verwijder token + cache
+    await redisSet('gdpr_confirm:' + tokenHash, 'used', 1);
+    redis.del('wk:' + userId).catch(() => {});
+
+    await logSecurityEvent('gdpr_delete', { userHash }).catch(() => {});
+
+    return res.send(`
+      <html><body style="font-family:monospace;background:#0c0e10;color:#e2e4e8;padding:40px;text-align:center">
+        <h2 style="color:#00ff9d">[OK] Account verwijderd.</h2>
+        <p style="color:#8a8e98;margin-top:12px">Alle gegevens zijn permanent verwijderd. Je API key is ongeldig.</p>
+        <a href="/" style="color:#00ff9d">← Terug naar home</a>
+      </body></html>
+    `);
+  } catch(e) {
+    console.error('[WALL] GDPR confirm error:', e.message);
+    return res.status(500).send('<h2>Er ging iets mis. Neem contact op via privacy@paramant.app</h2>');
+  }
 });
 
 app.get('/api/auth/recover', async function(req, res) {

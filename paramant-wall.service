@@ -1,0 +1,48 @@
+[Unit]
+Description=PARAMANT WALL v4.1.3
+After=network.target redis.service docker.service
+Requires=docker.service
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+EnvironmentFile=/opt/wall/.env
+Type=simple
+User=root
+WorkingDirectory=/opt/wall
+ExecStart=/usr/bin/node /opt/wall/cluster.js
+ExecStartPost=/bin/sleep 2
+
+# Restart gedrag
+Restart=on-failure
+RestartSec=5
+RestartSteps=3
+RestartMaxDelaySec=30
+
+# Watchdog: als Node 30 sec niet reageert → restart
+
+# Limieten
+MemoryMax=512M
+MemoryHigh=400M
+CPUQuota=90%
+TasksMax=256
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=paramant-wall
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/wall /tmp
+PrivateTmp=yes
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target
