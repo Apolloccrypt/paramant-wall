@@ -104,7 +104,7 @@ footer a:hover{color:var(--g)}
 <nav>
   <a href="/" class="nav-logo"><span class="n">PARAMANT<span class="w"> WALL</span></span></a>
   <a href="/" class="nav-back">← Terug naar Wall</a>
-  <div class="nav-ts">Versie 1.0 · 26 maart 2026</div>
+  <div class="nav-ts">Versie 1.0 · 27 maart 2026</div>
 </nav>
 
 <div class="page">
@@ -112,7 +112,7 @@ footer a:hover{color:var(--g)}
   <div class="doc-header">
     <div class="doc-lbl">Juridisch · GDPR · AVG</div>
     <h1 class="doc-title">Privacyverklaring</h1>
-    <div class="doc-version"><span style="color:var(--g)">[DOC]</span> v1.0 · 26 maart 2026 · NL/EN · Hetzner Helsinki</div>
+    <div class="doc-version"><span style="color:var(--g)">[DOC]</span> v1.0 · 27 maart 2026 · NL/EN · Hetzner Helsinki</div>
     <p class="doc-summary">
       Dit is de volledige, eerlijke privacyverklaring van PARAMANT WALL. We schrijven hem niet voor advocaten — we schrijven hem zodat jij hem begrijpt. Alles staat erin: wat we opslaan, wat we nooit opslaan, en waarom. Geen kleine lettertjes.
     </p>
@@ -191,7 +191,7 @@ footer a:hover{color:var(--g)}
       <div class="limit-title">STAP 1 — IP-adres anonimisering</div>
       <div class="limit-text">
         Het IP-adres van de bezoeker (bijv. <code style="color:var(--g)">85.204.112.47</code>) wordt direct gehasht:<br><br>
-        <code style="color:var(--g)">sha256("85.204.112.47" + "2026-03-26" + GEHEIME_SALT)</code><br>
+        <code style="color:var(--g)">sha256("85.204.112.47" + "2026-03-27" + GEHEIME_SALT)</code><br>
         → <code style="color:var(--g)">a3f8c2d1e7b4f91c</code><br><br>
         De hash is <strong>dagelijks wisselend</strong> (andere salt elke dag). Het IP-adres is onomkeerbaar. Twee verschillende bezoekers op dezelfde dag met hetzelfde IP: één hash — gewenst voor sessie-analytics. Morgen: volledig andere hash. Geen enkel persistent profiel.
       </div>
@@ -430,7 +430,7 @@ footer a:hover{color:var(--g)}
     <div class="section-title">Wijzigingen in dit beleid</div>
     <p>Bij materiële wijzigingen informeren wij klanten per e-mail minimaal 14 dagen van tevoren. De datum van de laatste wijziging staat altijd bovenaan dit document. Wijzigingshistorie:</p>
     <div style="margin-top:12px">
-      <div class="changelog-row"><span class="cl-date">2026-03-26</span><span class="cl-text">v1.0 — Eerste publicatie. Passwordless systeem beschreven.</span></div>
+      <div class="changelog-row"><span class="cl-date">2026-03-27</span><span class="cl-text">v1.0 — Eerste publicatie. Passwordless systeem beschreven.<br>2026-03-27v1.1 — Beveiligingsupgrades: mTLS Cloudflare, fail-open snippet v3.6.0, Redis reconnect, SSRF-bescherming, API key rotatie, dagelijkse PostgreSQL backup.</span></div>
     </div>
   </div>
 
