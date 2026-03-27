@@ -100,6 +100,56 @@ setInterval(async function() {
 
 app.use(express.json({ limit: '32kb' }));
 
+// ── Input validatie helpers ─────────────────────────────────────
+function sanitizeEmail(email) {
+  if (!email || typeof email !== 'string') return null;
+  var e = email.toLowerCase().trim().slice(0, 254);
+  if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(e)) return null;
+  return e;
+}
+
+function sanitizeDomain(domain) {
+  if (!domain || typeof domain !== 'string') return [];
+  return domain.split(',')
+    .map(function(d) { return d.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, ''); })
+    .filter(function(d) { return d.length > 0 && d.length < 255 && /^[a-z0-9][a-z0-9\-\.]*[a-z0-9]$/.test(d); })
+    .slice(0, 150);
+}
+
+function sanitizePlan(plan) {
+  var valid = ['starter','pro','business','test'];
+  return valid.indexOf(plan) >= 0 ? plan : 'starter';
+}
+
+function sanitizeTemplate(tpl) {
+  var valid = ['ultra-streng','basis-analytics','marketing-light','custom'];
+  return valid.indexOf(tpl) >= 0 ? tpl : 'ultra-streng';
+}
+
+function sanitizeString(str, maxLen) {
+  if (!str || typeof str !== 'string') return '';
+  return str.trim().slice(0, maxLen || 500).replace(/<[^>]*>/g, '');
+}
+
+// Request size limit middleware (5MB max)
+app.use(function(req, res, next) {
+  var size = parseInt(req.headers['content-length'] || 0);
+  if (size > 5 * 1024 * 1024) {
+    return res.status(413).json({ error: 'payload_too_large' });
+  }
+  next();
+});
+
+// Security middleware: verwijder server info
+app.use(function(req, res, next) {
+  res.removeHeader('X-Powered-By');
+  res.removeHeader('Server');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
 // ── Security headers ─────────────────────────────────────────────
 app.use(function(req, res, next) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -127,8 +177,18 @@ redis.connect().catch(function(e) { console.error('[WALL] Redis connect:', e.mes
 
 const pg = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 10,
-  idleTimeoutMillis: 30000,
+  max:              20,        // Max 20 gelijktijdige verbindingen
+  min:              2,         // Altijd 2 warm
+  idleTimeoutMillis: 30000,    // 30s idle timeout
+  connectionTimeoutMillis: 5000, // 5s connect timeout
+  statement_timeout: 10000,    // 10s query timeout
+  ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('sslmode=require')
+    ? { rejectUnauthorized: false }
+    : false,
+});
+// Pool error handler (voorkomt crash bij DB disconnect)
+pg.on('error', function(err) {
+  console.error('[WALL] PG pool error:', err.code || err.message.slice(0,40));
 });
 
 // ── Session token ─────────────────────────────────────────────────
@@ -345,10 +405,13 @@ async function activateAccount({ email, plan, domain, stripeCustomerId, stripeSu
 // ══════════════════════════════════════════════════════════════════
 app.post('/api/auth/register', async function(req, res) {
   const body     = req.body || {};
-  const email    = (body.email    || '').toLowerCase().trim();
-  const plan     = (body.plan     || 'starter').trim();
-  const domain   = (body.domain   || '').trim();
-  const template = (body.template || 'ultra-streng').trim();
+  const email    = sanitizeEmail(body.email);
+  const plan     = sanitizePlan(body.plan);
+  const domains  = sanitizeDomain(body.domain || '');
+  const domain   = domains.join(',');
+  const template = sanitizeTemplate(body.template);
+
+  if (!email) return res.status(400).json({ error: 'invalid_email' });
 
   // Validatie
   if (!email || email.indexOf('@') < 1 || email.length > 200) {
@@ -922,18 +985,41 @@ function proxyRequest(upstream, method, headers, body) {
   });
 }
 
+// Stats batch buffer — flush elke 5 seconden ipv per request
+var _statsBuf = {};
 function incStats(customerId, type) {
-  const month = new Date().toISOString().slice(0, 7);
-  const col   = { blocked:'blocked', strip:'stripped', allow:'allowed' }[type] || 'allowed';
-  return pg.query(
-    `INSERT INTO usage_monthly (customer_id, month, requests, ${col})
-     VALUES ($1, $2, 1, 1)
-     ON CONFLICT (customer_id, month) DO UPDATE
-     SET requests = usage_monthly.requests + 1,
-         ${col} = usage_monthly.${col} + 1`,
-    [customerId, month]
-  ).catch(() => {});
+  var col = { blocked:'blocked', strip:'stripped', allow:'allowed' }[type] || 'allowed';
+  var key = customerId + ':' + col;
+  _statsBuf[key] = (_statsBuf[key] || 0) + 1;
 }
+
+// Flush stats buffer naar DB (batch update)
+async function flushStatsBuf() {
+  var buf = _statsBuf;
+  _statsBuf = {};
+  if (!Object.keys(buf).length) return;
+  var month = new Date().toISOString().slice(0, 7);
+  var client;
+  try {
+    client = await pg.connect();
+    for (var key in buf) {
+      if (!Object.prototype.hasOwnProperty.call(buf, key)) continue;
+      var parts = key.split(':');
+      var cid = parts[0];
+      var col = parts[1];
+      var cnt = buf[key];
+      await client.query(
+        'INSERT INTO usage_monthly (customer_id, month, requests, ' + col + ') VALUES ($1, $2, $3, $3) ON CONFLICT (customer_id, month) DO UPDATE SET requests = usage_monthly.requests + $3, ' + col + ' = usage_monthly.' + col + ' + $3',
+        [cid, month, cnt]
+      );
+    }
+  } catch(e) {
+    console.error('[WALL] flushStats error:', e.code || e.message.slice(0,40));
+  } finally {
+    if (client) client.release();
+  }
+}
+setInterval(flushStatsBuf, 5000);
 
 // GA4 proxy
 app.all('/proxy/ga4', requireCustomer, async function(req, res) {
@@ -1198,6 +1284,18 @@ app.get('/api/auth/recover', async function(req, res) {
 });
 
 
+
+app.get('/api/version', function(req, res) {
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.json({
+    ok: true,
+    server_version: '4.0.0',
+    snippet_version: '4.0.0',
+    min_snippet:     '3.4.0',
+  });
+});
+
 app.get('/health', function(req, res) {
   res.json({ ok: true, version: VERSION, ts: new Date().toISOString() });
 });
@@ -1231,4 +1329,17 @@ app.use(function(err, req, res, next) { res.status(500).json({ error: 'internal_
 // ── Start ─────────────────────────────────────────────────────────
 http.createServer(app).listen(PORT, '127.0.0.1', function() {
 
+});
+
+// Graceful shutdown
+['SIGTERM','SIGINT'].forEach(function(sig) {
+  process.once(sig, async function() {
+    console.log('[WALL] Graceful shutdown:', sig);
+    try {
+      await flushStatsBuf(); // Flush stats voor shutdown
+      await pg.end();
+      await redis.quit();
+    } catch(e) {}
+    process.exit(0);
+  });
 });
