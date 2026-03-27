@@ -1229,16 +1229,22 @@ app.get('/snippet.js', function(req, res) {
 
 // ── Static files ──────────────────────────────────────────────────
 // ── Security middleware ──────────────────────────────────────────
-// Prototype pollution bescherming
+// Blokkeer OPTIONS en TRACE
+app.use(function(req, res, next) {
+  if (req.method === 'OPTIONS' || req.method === 'TRACE') {
+    return res.status(405).json({ error: 'method_not_allowed' });
+  }
+  next();
+});
+// Prototype pollution bescherming — blokkeer ipv sanitize
 app.use(function(req, res, next) {
   if (req.body) {
-    const dangerous = ['__proto__', 'constructor', 'prototype'];
-    function sanitizeObj(obj) {
-      if (typeof obj !== 'object' || obj === null) return;
-      dangerous.forEach(function(k) { delete obj[k]; });
-      Object.values(obj).forEach(function(v) { if (typeof v === 'object') sanitizeObj(v); });
+    const body_str = JSON.stringify(req.body);
+    if (body_str.includes('__proto__') ||
+        body_str.includes('constructor') ||
+        body_str.includes('prototype')) {
+      return res.status(400).json({ error: 'invalid_input' });
     }
-    sanitizeObj(req.body);
   }
   next();
 });
@@ -1619,6 +1625,8 @@ REQUIRED_ENV.forEach(function(k) {
 });
 
 app.get('/api/version', function(req, res) {
+  return res.status(404).json({ error: 'not_found' });
+  if (false) {
   res.setHeader('Cache-Control', 'public, max-age=3600');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.json({

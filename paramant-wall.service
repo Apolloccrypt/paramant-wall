@@ -6,9 +6,10 @@ StartLimitIntervalSec=120
 StartLimitBurst=5
 
 [Service]
+User=wall
+Group=wall
 EnvironmentFile=/opt/wall/.env
 Type=simple
-User=root
 WorkingDirectory=/opt/wall
 ExecStart=/usr/bin/node /opt/wall/cluster.js
 ExecStartPost=/bin/sleep 2
