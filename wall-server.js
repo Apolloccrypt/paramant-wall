@@ -951,28 +951,51 @@ app.post('/api/auth/rotate-key', async function(req, res) {
 }
 
 async function sendEmail(to, subject, html) {
-  // Gebruik SMTP als geconfigureerd, anders alleen log
-  const SMTP_HOST = process.env.SMTP_HOST;
-  const SMTP_USER = process.env.SMTP_USER;
-  const SMTP_PASS = process.env.SMTP_PASS;
-  if (!SMTP_HOST) {
-    console.log('[WALL] EMAIL (no SMTP):', subject, '->', to.slice(0,4)+'***');
+  const POSTMARK_KEY = process.env.POSTMARK_API_KEY;
+  if (!POSTMARK_KEY) {
+    console.log('[WALL] EMAIL (no Postmark key):', subject, '->', to.slice(0,4)+'***');
     return false;
   }
   try {
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
-      host: SMTP_HOST, port: parseInt(process.env.SMTP_PORT||'587'),
-      secure: false,
-      auth: { user: SMTP_USER, pass: SMTP_PASS }
+    const https = require('https');
+    const body = JSON.stringify({
+      From: 'noreply@paramant.app',
+      To: to,
+      Subject: subject,
+      HtmlBody: html,
+      MessageStream: 'outbound'
     });
-    await transporter.sendMail({
-      from: '"PARAMANT WALL" <noreply@paramant.app>',
-      to, subject, html
+    await new Promise(function(resolve, reject) {
+      const req = https.request({
+        hostname: 'api.postmarkapp.com',
+        path: '/email',
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-Postmark-Server-Token': POSTMARK_KEY,
+          'Content-Length': Buffer.byteLength(body)
+        }
+      }, function(res) {
+        let data = '';
+        res.on('data', function(c) { data += c; });
+        res.on('end', function() {
+          const d = JSON.parse(data);
+          if (d.ErrorCode && d.ErrorCode !== 0) {
+            reject(new Error('Postmark: ' + d.Message));
+          } else {
+            resolve(d);
+          }
+        });
+      });
+      req.on('error', reject);
+      req.write(body);
+      req.end();
     });
+    console.log('[WALL] Email verzonden via Postmark:', subject, '->', to.slice(0,4)+'***');
     return true;
   } catch(e) {
-    console.error('[WALL] Email error:', e.message.slice(0,60));
+    console.error('[WALL] Postmark error:', e.message.slice(0,80));
     return false;
   }
 }
