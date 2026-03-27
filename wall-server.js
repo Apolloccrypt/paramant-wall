@@ -1360,8 +1360,8 @@ app.post('/api/auth/recover', async function(req, res) {
   const emailHash = sha256(email).slice(0, 20);
   const rlKey     = 'recover_rl:' + emailHash;
   const rlCnt     = parseInt(await redisGet(rlKey) || 0) || 0;
-  if (rlCnt >= 3) return res.status(429).json({ error: 'rate_limit', retry_after: 3600 });
-  await redis.setEx(rlKey, 3600, String(rlCnt + 1)).catch(function(){});
+  if (rlCnt >= 5) return res.status(429).json({ error: 'rate_limit', retry_after: 900 });
+  await redisSet(rlKey, String(rlCnt + 1), 900);
 
   // Check of email bestaat (geen enumeration — altijd 200)
   const userRow = await pg.query(
