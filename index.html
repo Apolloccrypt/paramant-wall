@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230c0e10'/%3E%3Ctext x='6' y='24' font-size='20' font-weight='bold' fill='%2300ff9d' font-family='monospace'%3EW%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PARAMANT WALL — Privacy Proxy voor Analytics</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230c0e10'/><text y='24' font-size='22' fill='%2300ff9d'>W</text></svg>">
+<meta name="description" content="Houd analytics. Gooi cookies weg. PARAMANT WALL proxyt tracking requests en stripped alle PII voordat het Google bereikt.">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c0e10;--s1:#111214;--s2:#1a1d22;
+  --b1:#1e2026;--b2:#2a2d35;--b3:#3d4149;
+  --t1:#e2e4e8;--t2:#c8ccd4;--t3:#8a8e98;--t4:#5a6070;
+  --g:#00ff9d;--gd:rgba(0,255,157,.06);--gb:rgba(0,255,157,.18);
+  --mono:ui-monospace,'Cascadia Code','Fira Code','Consolas',monospace;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--t2);font-family:var(--mono);overflow-x:hidden}
+::-webkit-scrollbar{width:2px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--b2)}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;height:48px;background:var(--bg);border-bottom:1px solid var(--b1);display:flex;align-items:stretch;z-index:100}
+.nav-logo{display:flex;align-items:center;gap:8px;padding:0 20px;border-right:1px solid var(--b1);text-decoration:none;flex-shrink:0}
+.nav-logo .n{font-size:14px;font-weight:800;color:var(--t1);letter-spacing:.02em}
+.nav-logo .w{color:var(--g)}
+.nav-logo .v{font-size:9px;color:var(--t4);border:1px solid var(--b2);padding:1px 4px}
+.nav-links{display:flex;align-items:stretch}
+.nav-links a{font-size:11px;color:var(--t3);text-decoration:none;letter-spacing:.05em;padding:0 18px;display:flex;align-items:center;border-right:1px solid var(--b1);transition:color .15s}
+.nav-links a:hover{color:var(--g)}
+.nav-sys{margin-left:auto;display:flex;align-items:center;padding:0 16px;font-size:9px;color:#4a7c59;letter-spacing:.08em;border-left:1px solid var(--b1)}
+.nav-cta{display:flex;align-items:center;padding:0 20px;background:var(--g);color:var(--bg) !important;font-weight:800;border:none !important;letter-spacing:.06em;cursor:pointer;transition:background .15s}
+.nav-cta:hover{background:#00cc7a !important;color:var(--bg) !important}
+
+/* HERO */
+.hero{padding:80px 24px 60px;max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 460px;gap:60px;align-items:center}
+@media(max-width:900px){.hero{grid-template-columns:1fr;gap:40px;padding:70px 20px 50px}}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--gd);border:1px solid var(--gb);font-size:10px;color:var(--g);letter-spacing:.08em;margin-bottom:20px}
+.blink{width:5px;height:5px;border-radius:50%;background:var(--g);animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+h1{font-size:clamp(28px,4.5vw,52px);font-weight:800;color:var(--t1);line-height:1.1;letter-spacing:-.5px;margin-bottom:16px}
+h1 em{font-style:normal;color:var(--g)}
+.hero-sub{font-size:13px;color:var(--t3);line-height:1.9;max-width:440px;margin-bottom:28px}
+.hero-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:12px 22px;font-size:11px;font-family:var(--mono);font-weight:700;letter-spacing:.06em;text-decoration:none;border:none;cursor:pointer;transition:all .15s}
+.btn-g{background:var(--g);color:var(--bg)}
+.btn-g:hover{background:#00cc7a}
+.btn-ghost{background:transparent;border:1px solid var(--b2);color:var(--t3)}
+.btn-ghost:hover{border-color:var(--g);color:var(--g)}
+.trust{display:flex;gap:16px;flex-wrap:wrap}
+.trust span{font-size:11px;color:var(--t4);display:flex;align-items:center;gap:5px}
+.trust .ic{color:var(--g)}
+
+/* PROXY VISUAL */
+.pvis{background:var(--s1);border:1px solid var(--b1)}
+.pvis-hd{padding:10px 14px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:6px}
+.pdot{width:8px;height:8px;border-radius:50%}
+.pvis-title{font-size:10px;color:var(--t4);letter-spacing:.08em;flex:1;margin-left:6px}
+.pvis-live{font-size:9px;color:var(--g);letter-spacing:.1em}
+.pvis-body{padding:12px 14px}
+.pr{display:flex;align-items:center;gap:8px;padding:6px 8px;margin-bottom:3px;font-size:11px;border:1px solid transparent}
+.pr.block{background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.15)}
+.pr.allow{background:var(--gd);border-color:var(--gb)}
+.pr.anon{background:rgba(245,196,0,.05);border-color:rgba(245,196,0,.15)}
+.pr .lbl{flex:1;color:var(--t2)}
+.badge{font-size:9px;padding:1px 5px;letter-spacing:.06em}
+.badge.r{background:rgba(239,68,68,.1);color:#f87171}
+.badge.g{background:var(--gd);color:var(--g)}
+.badge.y{background:rgba(245,196,0,.08);color:#f5c400}
+.pdivider{text-align:center;padding:5px;font-size:10px;color:var(--t4);letter-spacing:.06em}
+.pdest{margin-top:8px;padding:7px 8px;background:var(--bg);border:1px solid var(--b1);display:flex;align-items:center;gap:8px;font-size:10px}
+.pdest-lbl{color:var(--t4)}
+.pdest-val{color:var(--g);flex:1}
+.pdest-tag{color:var(--t4);background:var(--b1);padding:1px 5px;font-size:9px}
+
+/* DIVIDER */
+hr{border:none;border-top:1px solid var(--b1)}
+
+/* SECTION */
+.sec{padding:64px 24px;max-width:1100px;margin:0 auto}
+.sec-lbl{font-size:10px;color:var(--t4);letter-spacing:.1em;margin-bottom:6px}
+.sec-title{font-size:clamp(20px,3vw,32px);font-weight:800;color:var(--t1);line-height:1.15;margin-bottom:12px}
+.sec-sub{font-size:13px;color:var(--t3);line-height:1.9;max-width:520px;margin-bottom:40px}
+
+/* FEATURES */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--b1);border:1px solid var(--b1)}
+@media(max-width:700px){.feat-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:440px){.feat-grid{grid-template-columns:1fr}}
+.feat{background:var(--bg);padding:24px;transition:background .15s}
+.feat:hover{background:var(--s1)}
+.feat-n{font-size:9px;color:var(--t4);letter-spacing:.1em;margin-bottom:10px}
+.feat-ic{font-size:20px;margin-bottom:10px;display:block}
+.feat-title{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:6px}
+.feat-desc{font-size:11px;color:var(--t3);line-height:1.8}
+.ftag{display:inline-block;margin-top:10px;font-size:9px;padding:2px 6px;letter-spacing:.06em}
+.ftag-g{background:var(--gd);color:var(--g)}
+.ftag-r{background:rgba(239,68,68,.08);color:#f87171}
+
+/* HOW */
+.how-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--b1);border:1px solid var(--b1)}
+@media(max-width:700px){.how-grid{grid-template-columns:1fr 1fr}}
+.how-step{background:var(--s1);padding:20px}
+.hn{font-size:9px;color:var(--t4);letter-spacing:.1em;margin-bottom:8px}
+.ht{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:4px}
+.hd{font-size:11px;color:var(--t3);line-height:1.7}
+.htag{display:inline-block;font-size:9px;padding:2px 5px;margin-top:8px;background:var(--gd);color:var(--g)}
+
+/* PRICING */
+.price-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--b1);border:1px solid var(--b1)}
+@media(max-width:900px){.price-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:500px){.price-grid{grid-template-columns:1fr}}
+.pc{background:var(--bg);padding:24px;position:relative;transition:background .15s}
+.pc:hover{background:var(--s1)}
+.pc.featured{background:var(--s1);border-top:2px solid var(--g)}
+.pc-plan{font-size:9px;color:var(--t4);letter-spacing:.1em;margin-bottom:10px}
+.pc-price{font-size:28px;font-weight:800;color:var(--t1);margin-bottom:2px;line-height:1}
+.pc-price span{font-size:13px;font-weight:400;color:var(--t3)}
+.pc-period{font-size:11px;color:var(--t4);margin-bottom:18px}
+.pc-feats{list-style:none;margin-bottom:20px}
+.pc-feats li{font-size:11px;color:var(--t3);padding:4px 0;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:6px}
+.pc-feats li:last-child{border:none}
+.ck{color:var(--g);font-size:12px}
+.xx{color:var(--t4);font-size:12px}
+.pc-btn{display:block;width:100%;padding:10px;text-align:center;font-size:11px;font-family:var(--mono);font-weight:700;letter-spacing:.06em;cursor:pointer;border:none;text-decoration:none;transition:all .15s}
+.pc-btn-g{background:var(--g);color:var(--bg)}
+.pc-btn-g:hover{background:#00cc7a}
+.pc-btn-o{background:transparent;border:1px solid var(--b2);color:var(--t3)}
+.pc-btn-o:hover{border-color:var(--g);color:var(--g)}
+.pc-pop{position:absolute;top:0;left:0;right:0;background:var(--g);color:var(--bg);font-size:9px;text-align:center;padding:3px;font-weight:700;letter-spacing:.1em}
+
+/* FORM */
+.form-wrap{max-width:520px;margin:0 auto}
+.form-card{background:var(--s1);border:1px solid var(--b1);padding:32px}
+.form-title{font-size:18px;font-weight:800;color:var(--t1);margin-bottom:6px}
+.form-sub{font-size:12px;color:var(--t3);line-height:1.8;margin-bottom:24px}
+.fg{margin-bottom:14px}
+label{display:block;font-size:10px;color:var(--t4);letter-spacing:.08em;margin-bottom:5px}
+input{display:block;width:100%;padding:11px 12px;background:var(--bg);border:1px solid var(--b2);color:var(--t1);font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s}
+input:focus{border-color:var(--g)}
+input::placeholder{color:var(--t4)}
+.fsub{width:100%;padding:13px;background:var(--g);color:var(--bg);font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.08em;border:none;cursor:pointer;transition:background .15s;margin-top:6px}
+.fsub:hover{background:#00cc7a}
+.fsub:disabled{opacity:.4;cursor:not-allowed}
+.fres{margin-top:14px;padding:14px;font-size:12px;line-height:1.8;display:none}
+.fres.ok{background:var(--gd);border:1px solid var(--gb);color:var(--g)}
+.fres.err{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);color:#f87171}
+.snip{background:var(--bg);border:1px solid var(--b1);padding:10px;font-size:10px;color:var(--g);word-break:break-all;margin:8px 0;font-family:var(--mono);line-height:1.7}
+.cpbtn{padding:5px 12px;background:var(--b1);border:none;color:var(--t3);font-size:10px;font-family:var(--mono);cursor:pointer;letter-spacing:.05em;transition:all .15s}
+.cpbtn:hover{background:var(--b2);color:var(--t1)}
+
+/* CODE */
+.code{background:var(--s1);border:1px solid var(--b1);padding:16px;font-size:11px;line-height:1.9;overflow-x:auto;margin-top:14px}
+.cc{color:var(--t4)}.cg{color:var(--g)}.cy{color:#f5c400}
+
+/* FOOTER */
+footer{border-top:1px solid var(--b1);padding:24px;max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.fl{font-size:14px;font-weight:800;color:var(--t1)}
+.fl .w{color:var(--g)}
+.flinks{display:flex;gap:20px;font-size:11px;color:var(--t4)}
+.flinks a{color:inherit;text-decoration:none}
+.flinks a:hover{color:var(--g)}
+.fn{font-size:10px;color:var(--t4);text-align:right}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">
+    <span class="n">PARAMANT<span class="w"> WALL</span></span>
+    <span class="v">v0.1.0</span>
+  </a>
+  <div class="nav-links">
+    <a href="#demo">DEMO</a><a href="#features">FEATURES</a>
+    <a href="#hoe">HOE HET WERKT</a>
+    <a href="#pricing">PRICING</a>
+    <a href="https://paramant.app" target="_blank">PARAMANT</a>
+  </div>
+  <span class="nav-sys">SYS_READY</span>
+  <a href="#register" class="nav-links nav-cta" onclick="event.preventDefault();openModal('starter')" href="#">→ START NU</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div>
+    <div class="hero-badge"><span class="blink"></span>LIVE · wall.paramant.app · v0.1.0</div>
+    <h1>Analytics ja.<br><em>Privacy ook.</em></h1>
+    <p class="hero-sub">Een privacy proxy voor jouw website. Alle tracking requests lopen via PARAMANT WALL — cookies gestript, IP geanonimiseerd, PII geblokkeerd. Jij houdt analytics. Jouw bezoekers houden hun privacy. Bedrijven betalen. Bezoekers nooit.</p>
+    <div class="hero-btns">
+      <a href="#" class="btn btn-g" onclick="event.preventDefault();openModal('starter')" onclick="event.preventDefault();openModal('starter')">>> ACCOUNT AANMAKENMAKEN</a>
+      <a href="#hoe" class="btn btn-ghost">Hoe werkt het? v</a>
+    </div>
+    <div class="trust">
+      <span><span class="ic">[OK]</span> GDPR-compliant</span>
+      <span><span class="ic">[OK]</span> Zero logging</span>
+      <span><span class="ic">[OK]</span> Open-source</span>
+      <span><span class="ic">[OK]</span> Bezoekers nooit gevolgd</span>
+    </div>
+  </div>
+
+  <div class="pvis">
+    <div class="pvis-hd">
+      <div class="pdot" style="background:#ef4444"></div>
+      <div class="pdot" style="background:#f5c400;margin-left:4px"></div>
+      <div class="pdot" style="background:var(--g);margin-left:4px"></div>
+      <span class="pvis-title">// WALL INTERCEPTIE</span>
+      <span class="pvis-live">ACTIEF</span>
+    </div>
+    <div class="pvis-body">
+      <div style="font-size:10px;color:var(--t4);margin-bottom:8px;letter-spacing:.06em">INKOMEND → JOUW SITE</div>
+      <div class="pr block"><span>⛔</span><span class="lbl">Cookie: _ga=GA1.2.1234567</span><span class="badge r">GESTRIPT</span></div>
+      <div class="pr block"><span>⛔</span><span class="lbl">IP: 85.204.112.47</span><span class="badge r">GESTRIPT</span></div>
+      <div class="pr block"><span>⛔</span><span class="lbl">User-Agent: Mozilla/5.0 Win...</span><span class="badge r">GESTRIPT</span></div>
+      <div class="pr block"><span>⛔</span><span class="lbl">Hotjar · Meta Pixel · Segment</span><span class="badge r">GEBLOKKEERD</span></div>
+      <div class="pdivider">↓ WALL verwerkt ↓</div>
+      <div class="pr anon"><span>~</span><span class="lbl">client_id → sha256 + dagelijkse salt</span><span class="badge y">GEANON.</span></div>
+      <div class="pr anon"><span>~</span><span class="lbl">IP → hash (dag, niet persistent)</span><span class="badge y">GEANON.</span></div>
+      <div class="pdivider">↓ schoon naar Google ↓</div>
+      <div class="pr allow"><span>[OK]</span><span class="lbl">event: page_view</span><span class="badge g">DOORGELATEN</span></div>
+      <div class="pr allow"><span>[OK]</span><span class="lbl">session_duration, scroll_depth</span><span class="badge g">DOORGELATEN</span></div>
+      <div class="pdest">
+        <span class="pdest-lbl">UPSTREAM:</span>
+        <span class="pdest-val">google-analytics.com</span>
+        <span class="pdest-tag">SCHOON</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- LIVE PREVIEW DEMO -->
+<div class="sec" id="demo" style="padding-top:40px;padding-bottom:40px;background:var(--s1);border-top:1px solid var(--b1);border-bottom:1px solid var(--b1)">
+  <div style="max-width:1100px;margin:0 auto;padding:0 24px">
+    <div class="sec-lbl">// LIVE DEMO</div>
+    <div class="sec-title" style="margin-bottom:8px">Zie exact wat we blokkeren</div>
+    <p style="font-size:12px;color:var(--t4);margin-bottom:24px;max-width:500px">Klik op een scenario — de feed toont live wat de Wall blokkeert, anonimiseert en doorlaat. Publiek aantoonbaar, zoals blockchain.</p>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap" id="demo-tabs">
+      <button onclick="setScenario('volkskrant',this)" class="demo-tab active">Volkskrant-stijl</button>
+      <button onclick="setScenario('webshop',this)" class="demo-tab">Webshop</button>
+      <button onclick="setScenario('blog',this)" class="demo-tab">Kleine blog</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--b1);border:1px solid var(--b1);margin-bottom:1px">
+      <!-- ZONDER WALL -->
+      <div style="background:var(--bg);padding:16px">
+        <div style="font-size:10px;color:var(--t4);letter-spacing:.08em;margin-bottom:10px;display:flex;align-items:center;gap:6px">
+          <span style="width:6px;height:6px;border-radius:50%;background:#ef4444;display:inline-block"></span>
+          ZONDER WALL
+        </div>
+        <div id="demo-without">
+          <div class="dr dr-block"><span>↗</span><span class="dl">_ga=GA1.2.1234567890</span><span class="db db-r">COOKIE</span></div>
+          <div class="dr dr-block"><span>↗</span><span class="dl">IP: 85.204.112.47</span><span class="db db-r">RAW IP</span></div>
+          <div class="dr dr-block"><span>↗</span><span class="dl">Meta Pixel + fbclid</span><span class="db db-r">TRACKER</span></div>
+          <div class="dr dr-block"><span>↗</span><span class="dl">Hotjar sessie-opname</span><span class="db db-r">TRACKER</span></div>
+          <div class="dr dr-block"><span>↗</span><span class="dl">User-Agent fingerprint</span><span class="db db-r">PII</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px">
+          <div class="ds"><div class="dsn" style="color:#ef4444" id="d-trackers">5</div><div class="dsl">TRACKERS</div></div>
+          <div class="ds"><div class="dsn" style="color:#ef4444" id="d-cookies">3</div><div class="dsl">COOKIES</div></div>
+        </div>
+      </div>
+      <!-- MET WALL -->
+      <div style="background:var(--bg);padding:16px">
+        <div style="font-size:10px;color:var(--t4);letter-spacing:.08em;margin-bottom:10px;display:flex;align-items:center;gap:6px">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--g);display:inline-block"></span>
+          MET PARAMANT WALL
+        </div>
+        <div id="demo-with">
+          <div class="dr dr-block"><span>⛔</span><span class="dl">_ga cookie gestript</span><span class="db db-r">GESTRIPT</span></div>
+          <div class="dr dr-block"><span>⛔</span><span class="dl">Meta Pixel geblokkeerd</span><span class="db db-r">GEBLOKKEERD</span></div>
+          <div class="dr dr-anon"><span>~</span><span class="dl">IP → a3f8c2d1... (dag-hash)</span><span class="db db-y">GEANON.</span></div>
+          <div class="dr dr-anon"><span>~</span><span class="dl">client_id → 9b2e1f...</span><span class="db db-y">GEANON.</span></div>
+          <div class="dr dr-allow"><span>[OK]</span><span class="dl">event: page_view</span><span class="db db-g">DOORGELATEN</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px">
+          <div class="ds"><div class="dsn" style="color:var(--g)" id="d-blocked">4</div><div class="dsl">GEBLOKKEERD</div></div>
+          <div class="ds"><div class="dsn" style="color:#f5c400" id="d-anon">2</div><div class="dsl">GEANON.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PUBLIC FEED -->
+    <div style="background:var(--bg);border:1px solid var(--b1);border-top:none">
+      <div style="padding:8px 14px;background:var(--s1);border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <span style="font-size:10px;color:var(--t4);letter-spacing:.06em">// PUBLIEKE FEED · wall.paramant.app/feed/<span id="demo-hash">a3f8c2d1e7b4</span></span>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:10px;color:var(--t4)">TOTAAL: <strong id="feed-total-counter" style="color:var(--t1)">0</strong></span>
+          <span style="font-size:9px;color:var(--g);letter-spacing:.1em">LIVE</span>
+        </div>
+      </div>
+      <div id="demo-feed" style="padding:8px 14px;min-height:120px;max-height:180px;overflow:hidden"></div>
+      <div style="padding:8px 14px;border-top:1px solid var(--b1);display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:var(--s1)">
+        <div style="text-align:center"><div style="font-size:18px;font-weight:800;color:var(--t1)" id="fc-total">0</div><div style="font-size:9px;color:var(--t4);letter-spacing:.06em">REQUESTS</div></div>
+        <div style="text-align:center"><div style="font-size:18px;font-weight:800;color:#ef4444" id="fc-blocked">0</div><div style="font-size:9px;color:var(--t4);letter-spacing:.06em">GEBLOKKEERD</div></div>
+        <div style="text-align:center"><div style="font-size:18px;font-weight:800;color:#f5c400" id="fc-anon">0</div><div style="font-size:9px;color:var(--t4);letter-spacing:.06em">GEANON.</div></div>
+        <div style="text-align:center"><div style="font-size:18px;font-weight:800;color:var(--g)" id="fc-allowed">0</div><div style="font-size:9px;color:var(--t4);letter-spacing:.06em">DOORGELATEN</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.demo-tab{padding:6px 14px;font-size:11px;font-family:var(--mono);cursor:pointer;background:var(--s1);border:1px solid var(--b2);color:var(--t3);transition:all .15s;letter-spacing:.04em}
+.demo-tab:hover{border-color:var(--g);color:var(--g)}
+.demo-tab.active{background:var(--gd);border-color:var(--gb);color:var(--g)}
+.dr{display:flex;align-items:center;gap:8px;padding:5px 8px;margin-bottom:3px;font-size:11px;border:1px solid transparent}
+.dr-block{background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.15)}
+.dr-allow{background:var(--gd);border-color:var(--gb)}
+.dr-anon{background:rgba(245,196,0,.05);border-color:rgba(245,196,0,.15)}
+.dl{flex:1;color:var(--t2)}
+.db{font-size:9px;padding:1px 5px;letter-spacing:.06em}
+.db-r{background:rgba(239,68,68,.1);color:#f87171}
+.db-g{background:var(--gd);color:var(--g)}
+.db-y{background:rgba(245,196,0,.08);color:#f5c400}
+.ds{background:var(--s1);padding:8px;text-align:center;border:1px solid var(--b1)}
+.dsn{font-size:18px;font-weight:800}
+.dsl{font-size:9px;color:var(--t4);letter-spacing:.06em;margin-top:2px}
+.feed-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--b1);font-size:10px;font-family:var(--mono)}
+</style>
+
+<script>
+(function(){
+  const SCENARIOS = {
+    volkskrant:{trackers:12,cookies:5,blocked:10,anon:4,allowed:8,hash:'a3f8c2d1e7b4',rpm:340},
+    webshop:{trackers:8,cookies:4,blocked:6,anon:3,allowed:12,hash:'7e9b1a4f2c8d',rpm:85},
+    blog:{trackers:3,cookies:1,blocked:2,anon:1,allowed:4,hash:'f1d7a2e9c3b5',rpm:12}
+  };
+  const EVENTS=[
+    {t:'block',l:'_ga + _fbp cookies',b:'GESTRIPT'},
+    {t:'block',l:'Meta Pixel',b:'GEBLOKKEERD'},
+    {t:'anon',l:'IP geanonimiseerd',b:'GEANON.'},
+    {t:'allow',l:'event: page_view',b:'DOORGELATEN'},
+    {t:'allow',l:'scroll_depth: 60%',b:'DOORGELATEN'},
+    {t:'anon',l:'client_id gehasht',b:'GEANON.'},
+    {t:'block',l:'Hotjar geblokkeerd',b:'GEBLOKKEERD'},
+    {t:'allow',l:'event: session_start',b:'DOORGELATEN'},
+  ];
+  let total=0,fblocked=0,fanon=0,fallowed=0,rowCount=0;
+  let iv=null;
+
+  function pad(n){return String(n).padStart(2,'0');}
+  function ts(){const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());}
+  function rh(s){return Math.random().toString(16).slice(2,10)+(s?s.slice(4):'abcd');}
+
+  function addRow(ev,hash){
+    const feed=document.getElementById('demo-feed');
+    if(!feed)return;
+    const colors={block:'#ef4444',anon:'#f5c400',allow:'#00ff9d'};
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #1e2026;font-size:10px;font-family:var(--mono);opacity:0;transition:opacity .25s';
+    row.innerHTML='<span style="color:#4a7c59;flex:1">'+hash+'…</span><span style="color:#5a6070">'+ev.l+'</span><span style="font-size:9px;padding:1px 5px;color:'+colors[ev.t]+'">'+ev.b+'</span><span style="color:#3d4149">'+ts()+'</span>';
+    feed.insertBefore(row,feed.firstChild);
+    setTimeout(()=>row.style.opacity='1',20);
+    rowCount++;
+    // Elke 100 rows — leeg de feed maar houd tellers
+    if(rowCount>=100){
+      rowCount=0;
+      setTimeout(()=>{
+        feed.innerHTML='';
+        const note=document.createElement('div');
+        note.style.cssText='font-size:10px;color:#3d4149;text-align:center;padding:10px;font-family:var(--mono)';
+        note.textContent='// feed geleegd na 100 entries — tellers lopen door';
+        feed.appendChild(note);
+        setTimeout(()=>note.remove(),3000);
+      },300);
+    }
+    while(feed.children.length>8)feed.removeChild(feed.lastChild);
+  }
+
+  window.setScenario=function(name,btn){
+    document.querySelectorAll('.demo-tab').forEach(b=>b.classList.remove('active'));
+    if(btn)btn.classList.add('active');
+    const s=SCENARIOS[name];
+    if(!s)return;
+    document.getElementById('d-trackers').textContent=s.trackers;
+    document.getElementById('d-cookies').textContent=s.cookies;
+    document.getElementById('d-blocked').textContent=s.blocked;
+    document.getElementById('d-anon').textContent=s.anon;
+    document.getElementById('demo-hash').textContent=s.hash;
+    if(iv)clearInterval(iv);
+    const delay=Math.max(300,Math.round(60000/(s.rpm*4)));
+    iv=setInterval(()=>{
+      const ev=EVENTS[Math.floor(Math.random()*EVENTS.length)];
+      const hash=rh(s.hash);
+      addRow(ev,hash);
+      total++;
+      if(ev.t==='block')fblocked++;
+      else if(ev.t==='anon')fanon++;
+      else fallowed++;
+      const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+      set('fc-total',total);set('fc-blocked',fblocked);set('fc-anon',fanon);set('fc-allowed',fallowed);
+      set('feed-total-counter',total);
+    },delay);
+  };
+
+  // Start na DOM ready
+  setTimeout(()=>setScenario('volkskrant',document.querySelector('.demo-tab')),100);
+})();
+</script>
+
+
+<hr>
+
+<!-- FEATURES -->
+<div class="sec" id="features">
+  <div class="sec-lbl">// FEATURES</div>
+  <div class="sec-title">Alles wat je nodig hebt.<br>Niets wat je niet wilt.</div>
+  <div class="feat-grid">
+    <div class="feat"><span class="feat-n">01</span><span class="feat-ic">⛔</span><div class="feat-title">PII Stripper</div><div class="feat-desc">Cookies, IP-adressen, User-Agent fingerprints en user IDs gestript vóór forwarding. Geen PII bereikt Google.</div><span class="ftag ftag-r">GDPR Art. 5</span></div>
+    <div class="feat"><span class="feat-n">02</span><span class="feat-ic">~</span><div class="feat-title">Dagelijkse anonimisering</div><div class="feat-desc">IP en client_id vervangen door dagelijks wisselende SHA-256 hash. Sessionanalytics werken — persistent tracking niet.</div><span class="ftag ftag-g">Zero persistent ID</span></div>
+    <div class="feat"><span class="feat-n">03</span><span class="feat-ic">&gt;&gt;</span><div class="feat-title">Drop-in snippet</div><div class="feat-desc">Één script tag in je &lt;head&gt;. Alle analytics requests automatisch omgeleid. Geen code aanpassen nodig.</div><span class="ftag ftag-g">2 min setup</span></div>
+    <div class="feat"><span class="feat-n">04</span><span class="feat-ic">{}</span><div class="feat-title">Config als JSON</div><div class="feat-desc">Whitelist events, blokkeer endpoints, stel anonimisering in per domein. Exporteer als JSON profiel.</div><span class="ftag ftag-g">Portabel</span></div>
+    <div class="feat"><span class="feat-n">05</span><span class="feat-ic">0</span><div class="feat-title">Zero logging</div><div class="feat-desc">Standaard worden geen requests gelogd. De Wall verwerkt en vergeet. Optioneel: hash-only audit log.</div><span class="ftag ftag-r">Privacy-first</span></div>
+    <div class="feat"><span class="feat-n">06</span><span class="feat-ic">[SRC]</span><div class="feat-title">Open-source core</div><div class="feat-desc">Proxy logica volledig open-source en auditeerbaar. Geen black box. Zelf hosten mogelijk.</div><span class="ftag ftag-g">MIT License</span></div>
+  </div>
+</div>
+
+<hr>
+
+<!-- HOW -->
+<div class="sec" id="hoe">
+  <div class="sec-lbl">// HOE HET WERKT</div>
+  <div class="sec-title">Van tracker naar Wall naar analytics</div>
+  <div class="how-grid">
+    <div class="how-step"><div class="hn">STAP 01</div><div class="ht">Registreer</div><div class="hd">Maak een account aan. Je krijgt een API key en snippet.</div><span class="htag">30 seconden</span></div>
+    <div class="how-step"><div class="hn">STAP 02</div><div class="ht">Snippet plaatsen</div><div class="hd">Plak één script tag in je &lt;head&gt;. De Wall is direct actief.</div><span class="htag">1 regel code</span></div>
+    <div class="how-step"><div class="hn">STAP 03</div><div class="ht">Wall intercepteert</div><div class="hd">Alle GA4/Meta requests gaan via Wall. PII gestript, IP geanonimiseerd.</div><span class="htag">Automatisch</span></div>
+    <div class="how-step"><div class="hn">STAP 04</div><div class="ht">Schone data</div><div class="hd">Alleen toegestane events bereiken Google — zonder enige PII.</div><span class="htag">GDPR-compliant</span></div>
+  </div>
+  <div class="code">
+    <span class="cc">&lt;!-- Voeg toe aan &lt;head&gt; van je website --&gt;</span><br>
+    &lt;script src="<span class="cy">https://wall.paramant.app/snippet.js?k=wk_jouw_key</span>"&gt;&lt;/script&gt;<br><br>
+    <span class="cc">&lt;!-- Dat is alles. GA blijft werken. PII niet meer. --&gt;</span>
+  </div>
+</div>
+
+<hr>
+
+<!-- PRICING -->
+<div class="sec" id="pricing">
+  <div class="sec-lbl">// PRICING</div>
+  <div class="sec-title">Transparante prijzen.<br>Geen verrassingen.</div>
+  <p class="sec-sub">Website-eigenaren kiezen een plan. Bezoekers van jouw website zijn beschermd via de Wall van jouw website — zij betalen nooit, merken niets, en worden niet gevolgd.</p>
+  <div class="price-grid">
+    
+</div>
+
+<hr>
+
+<!-- REGISTER -->
+<div class="sec" id="register-old" style="display:none">
+  <div class="sec-lbl">// AAN DE SLAG</div>
+  <div class="sec-title" style="text-align:center">Start voor jouw website</div>
+  <p class="sec-sub" style="text-align:center;margin:0 auto 40px;max-width:400px">Website-eigenaren betalen voor de Wall. Jouw bezoekers betalen nooit — zij zijn altijd beschermd.</p>
+  <div class="form-wrap">
+    <div class="form-card">
+      <div class="form-title">Account aanmaken</div>
+      <div class="form-sub">Als website-eigenaar kies je een plan. Jouw bezoekers profiteren automatisch van privacy-bescherming — zonder account, zonder betaling, zonder dat zij iets merken.</div>
+      <div class="fg">
+        <label for="fd">JOUW DOMEIN</label>
+        <input id="fd" type="text" placeholder="mijnsite.nl" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="fg">
+        <label for="fe">EMAIL</label>
+        <input id="fe" type="email" placeholder="jij@bedrijf.nl" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label for="fp">PLAN</label>
+        <select id="fp" class="form-input" style="background:var(--bg);border:1px solid var(--b2);color:var(--t1);font-family:var(--mono);font-size:12px;padding:11px 12px;width:100%;outline:none;cursor:pointer">
+          <option value="starter">STARTER — €19/mnd (1 domein, 500k req/mnd)</option>
+          <option value="pro">PRO — €49/mnd (5 domeinen, 5M req/mnd)</option>
+          <option value="business">BUSINESS — €99/mnd (onbeperkt, 20M req/mnd)</option>
+        </select>
+      </div>
+      <button class="fsub" id="fsub" id="register-btn" onclick="wmOpen('starter')">>> DOOR NAAR BETALING</button>
+      <div class="fres" id="fres"></div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<footer>
+  <div class="fl">PARAMANT<span class="w"> WALL</span></div>
+  <div class="flinks">
+    <a href="https://paramant.app">Paramant</a>
+    <a href="https://github.com/Apolloccrypt" target="_blank">GitHub</a>
+    <a href="/cdn-cgi/l/email-protection#acdbcdc0c0ecdccddecdc1cdc2d882cddcdc">Contact</a>
+    <a href="https://wall.paramant.app/health">Status</a>
+  </div>
+  <div class="fn">Open-source · MIT · Hetzner Helsinki · Zero logging<br>© 2026 PARAMANT</div>
+</footer>
+
+</body>
+
+<div id="wm" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;padding:16px;overflow-y:auto">
+<div style="background:#111214;border:1px solid #1e2026;max-width:400px;width:100%;position:relative;font-family:'JetBrains Mono',monospace">
+
+<div style="padding:16px 20px 12px;border-bottom:1px solid #1e2026;display:flex;align-items:center;justify-content:space-between">
+  <div>
+    <div style="font-size:9px;color:#5a6070;letter-spacing:.1em;margin-bottom:3px">// PARAMANT WALL</div>
+    <div style="font-size:14px;font-weight:800;color:#e2e4e8" id="wm-plan">STARTER — €19/mnd</div>
+  </div>
+  <button onclick="wmClose()" style="background:none;border:none;color:#5a6070;font-size:16px;cursor:pointer;padding:4px">✕</button>
+</div>
+
+<div id="wm-s1" style="padding:16px 20px">
+
+  <!-- Plan selector -->
+  <div style="font-size:9px;color:#5a6070;letter-spacing:.1em;margin-bottom:8px">KIES JE PLAN</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px">
+
+    <div onclick="wmPlan('starter',this)" id="wmp-starter" style="padding:10px 6px;background:rgba(0,255,157,.06);border:1px solid rgba(0,255,157,.3);color:#00ff9d;font-size:9px;cursor:pointer;text-align:center;transition:all .15s">
+      <div style="font-weight:800;letter-spacing:.06em;font-size:10px">STARTER</div>
+      <div style="font-size:20px;font-weight:800;color:#e2e4e8;line-height:1.2;margin:3px 0">&#x20AC;19<span style="font-size:9px;font-weight:400;color:#5a6070">/mnd</span></div>
+      <div style="font-size:8px;color:#00ff9d;margin-bottom:4px;font-weight:600">Voor MKB &amp; starters</div>
+      <div style="font-size:8px;color:#5a6070;line-height:1.8;border-top:1px solid #1e2026;padding-top:5px;margin-top:2px;text-align:left">
+        <span style="color:#00ff9d">&#x2713;</span> 8 domeinen<br>
+        <span style="color:#00ff9d">&#x2713;</span> 2.000 req/min<br>
+        <span style="color:#00ff9d">&#x2713;</span> GA4 + Meta proxy<br>
+        <span style="color:#00ff9d">&#x2713;</span> Publieke feed<br>
+        <span style="color:#00ff9d">&#x2713;</span> Email support<br>
+        <span style="color:#3d4149">&#x2715;</span> Custom trackers<br>
+        <span style="color:#3d4149">&#x2715;</span> SLA garantie
+      </div>
+    </div>
+
+    <div onclick="wmPlan('pro',this)" id="wmp-pro" style="padding:10px 6px;background:#0c0e10;border:1px solid #2a2d35;color:#8a8e98;font-size:9px;cursor:pointer;text-align:center;transition:all .15s;position:relative">
+      <div style="position:absolute;top:0;left:0;right:0;background:#f5c400;color:#0c0e10;font-size:7px;font-weight:800;text-align:center;padding:2px;letter-spacing:.06em">MEEST GEKOZEN</div>
+      <div style="font-weight:800;letter-spacing:.06em;margin-top:12px;font-size:10px">PRO</div>
+      <div style="font-size:20px;font-weight:800;color:#e2e4e8;line-height:1.2;margin:3px 0">&#x20AC;49<span style="font-size:9px;font-weight:400;color:#5a6070">/mnd</span></div>
+      <div style="font-size:8px;color:#f5c400;margin-bottom:4px;font-weight:600">Voor groeiende bedrijven</div>
+      <div style="font-size:8px;color:#5a6070;line-height:1.8;border-top:1px solid #1e2026;padding-top:5px;margin-top:2px;text-align:left">
+        <span style="color:#00ff9d">&#x2713;</span> 40 domeinen<br>
+        <span style="color:#00ff9d">&#x2713;</span> 15.000 req/min<br>
+        <span style="color:#00ff9d">&#x2713;</span> GA4 + Meta + custom<br>
+        <span style="color:#00ff9d">&#x2713;</span> Publieke feed<br>
+        <span style="color:#00ff9d">&#x2713;</span> Prioriteit support<br>
+        <span style="color:#00ff9d">&#x2713;</span> Custom trackers<br>
+        <span style="color:#3d4149">&#x2715;</span> SLA garantie
+      </div>
+    </div>
+
+    <div onclick="wmPlan('business',this)" id="wmp-business" style="padding:10px 6px;background:#0c0e10;border:1px solid #2a2d35;color:#8a8e98;font-size:9px;cursor:pointer;text-align:center;transition:all .15s">
+      <div style="font-weight:800;letter-spacing:.06em;font-size:10px">BUSINESS</div>
+      <div style="font-size:20px;font-weight:800;color:#e2e4e8;line-height:1.2;margin:3px 0">&#x20AC;99<span style="font-size:9px;font-weight:400;color:#5a6070">/mnd</span></div>
+      <div style="font-size:8px;color:#60a5fa;margin-bottom:4px;font-weight:600">Voor enterprise &amp; agencies</div>
+      <div style="font-size:8px;color:#5a6070;line-height:1.8;border-top:1px solid #1e2026;padding-top:5px;margin-top:2px;text-align:left">
+        <span style="color:#00ff9d">&#x2713;</span> 150 domeinen<br>
+        <span style="color:#00ff9d">&#x2713;</span> 80.000 req/min<br>
+        <span style="color:#00ff9d">&#x2713;</span> Alle proxies + custom<br>
+        <span style="color:#00ff9d">&#x2713;</span> Publieke feed<br>
+        <span style="color:#00ff9d">&#x2713;</span> Dedicated support<br>
+        <span style="color:#00ff9d">&#x2713;</span> Custom trackers<br>
+        <span style="color:#00ff9d">&#x2713;</span> SLA 99.9% garantie
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Test plan knop -->
+  <div style="margin-bottom:12px">
+    <button onclick="wmSelectTest()" id="wmp-test" style="width:100%;padding:6px 10px;background:#0c0e10;border:1px solid rgba(245,196,0,.25);color:#f5c400;font-family:inherit;font-size:9px;cursor:pointer;letter-spacing:.04em;transition:all .15s;text-align:left">
+      &#x25B7; TEST &#x2014; &#x20AC;0.01 &middot; 10 minuten toegang &middot; <span style="color:#3d4149">voor ontwikkelaars / demo</span>
+    </button>
+  </div>
+
+  <!-- Email -->
+  <div style="margin-bottom:10px">
+    <label style="display:block;font-size:9px;color:#5a6070;letter-spacing:.08em;margin-bottom:4px">E-MAILADRES</label>
+    <input id="wm-email" type="email" placeholder="jij@bedrijf.nl" autocomplete="email"
+      style="width:100%;padding:10px 11px;background:#0c0e10;border:1px solid #2a2d35;color:#e2e4e8;font-family:inherit;font-size:12px;outline:none">
+  </div>
+
+  <!-- Domeinen -->
+  <div style="margin-bottom:12px">
+    <label style="display:block;font-size:9px;color:#5a6070;letter-spacing:.08em;margin-bottom:4px">
+      WEBSITE DOMEIN(EN) <span style="color:#3d4149;font-size:8px;letter-spacing:0">&#x2014; URL lock, alleen requests van deze domeinen</span>
+    </label>
+    <input id="wm-domain" type="text" placeholder="mijnsite.nl, shop.mijnsite.nl"
+      style="width:100%;padding:10px 11px;background:#0c0e10;border:1px solid #2a2d35;color:#e2e4e8;font-family:inherit;font-size:11px;outline:none">
+    <div style="font-size:8px;color:#3d4149;margin-top:3px">Meerdere domeinen: komma-gescheiden. Starter: max 8 &middot; Pro: max 40 &middot; Business: max 150</div>
+  </div>
+
+  <!-- Terms -->
+  <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border:1px solid #1e2026;background:#0c0e10;margin-bottom:12px;width:100%">
+    <input id="wm-terms" type="checkbox" style="flex-shrink:0;accent-color:#00ff9d;width:16px;height:16px;cursor:pointer">
+    <span style="font-size:10px;color:#5a6070;line-height:1.6">Ik accepteer de <a href="/privacy" target="_blank" style="color:#00ff9d">privacy policy</a> en verwerkingsvoorwaarden van PARAMANT WALL.</span>
+  </label>
+
+  <div id="wm-err" style="display:none;padding:7px 10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#f87171;font-size:10px;margin-bottom:10px"></div>
+
+  <button id="wm-btn" onclick="wmSubmit()" style="width:100%;padding:12px;background:#00ff9d;color:#0c0e10;font-family:inherit;font-size:11px;font-weight:800;letter-spacing:.08em;border:none;cursor:pointer;transition:background .15s">
+    >> DOOR NAAR BETALING
+  </button>
+  <div style="text-align:center;margin-top:8px;font-size:9px;color:#3d4149">Geen wachtwoord &middot; Direct Stripe &middot; Veilig &amp; priv&#xE9;</div>
+
+<div id="wm-s2" style="display:none;padding:32px 20px;text-align:center">
+  <div style="font-size:20px;color:#00ff9d;margin-bottom:12px" id="wm-spin">⟳</div>
+  <div style="font-size:12px;color:#e2e4e8;margin-bottom:4px" id="wm-lt">Account aanmaken...</div>
+  <div style="font-size:10px;color:#5a6070" id="wm-ls">E-mail valideren</div>
+  <div style="height:2px;background:#1e2026;margin-top:16px"><div id="wm-prog" style="height:100%;width:0%;background:#00ff9d;transition:width .5s"></div></div>
+</div>
+
+<div id="wm-s3" style="display:none;padding:16px 20px">
+  <div style="text-align:center;margin-bottom:14px">
+    <div style="font-size:22px;color:#00ff9d;margin-bottom:4px">[OK]</div>
+    <div style="font-size:13px;font-weight:800;color:#e2e4e8">Account aangemaakt!</div>
+    <div style="display:flex;justify-content:center;gap:5px;margin-top:8px">
+      <div style="width:6px;height:6px;border-radius:50%;background:#00ff9d" id="od1"></div>
+      <div style="width:6px;height:6px;border-radius:50%;background:#2a2d35" id="od2"></div>
+      <div style="width:6px;height:6px;border-radius:50%;background:#2a2d35" id="od3"></div>
+    </div>
+  </div>
+
+  <div id="op1">
+    <div style="font-size:9px;color:#5a6070;letter-spacing:.1em;margin-bottom:5px">STAP 1 — API KEY</div>
+    <div style="background:#0c0e10;border:1px solid rgba(0,255,157,.2);padding:9px;font-size:10px;color:#00ff9d;word-break:break-all;line-height:1.6;margin-bottom:6px" id="wm-key">—</div>
+    <button onclick="wmCopy('wm-key','wm-bc1')" id="wm-bc1" style="width:100%;padding:7px;background:#1a1d22;border:1px solid #2a2d35;color:#8a8e98;font-family:inherit;font-size:10px;cursor:pointer;margin-bottom:7px">[COPY] Kopieer API key</button>
+    <div style="font-size:9px;color:#f87171;padding:5px 7px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);margin-bottom:10px">[!] Nooit delen. Behandel als wachtwoord.</div>
+    <button onclick="obGo(2)" style="width:100%;padding:10px;background:#00ff9d;color:#0c0e10;font-family:inherit;font-size:10px;font-weight:800;border:none;cursor:pointer">Volgende: Snippet plaatsen</button>
+  </div>
+
+  <div id="op2" style="display:none">
+    <div style="font-size:9px;color:#5a6070;letter-spacing:.1em;margin-bottom:5px">STAP 2 — SNIPPET IN &lt;HEAD&gt;</div>
+    <div style="background:#0c0e10;border:1px solid #1e2026;padding:9px;font-size:10px;color:#00ff9d;word-break:break-all;line-height:1.6;margin-bottom:6px" id="wm-snip">—</div>
+    <button onclick="wmCopy('wm-snip','wm-bc2')" id="wm-bc2" style="width:100%;padding:7px;background:#1a1d22;border:1px solid #2a2d35;color:#8a8e98;font-family:inherit;font-size:10px;cursor:pointer;margin-bottom:7px">[COPY] Kopieer snippet</button>
+    <div style="font-size:10px;color:#8a8e98;line-height:1.7;margin-bottom:10px">Plak in &lt;head&gt; van elke pagina. Wall is direct actief.</div>
+    <button onclick="obGo(3)" style="width:100%;padding:10px;background:#00ff9d;color:#0c0e10;font-family:inherit;font-size:10px;font-weight:800;border:none;cursor:pointer">Volgende: Live feed</button>
+  </div>
+
+  <div id="op3" style="display:none">
+    <div style="font-size:9px;color:#5a6070;letter-spacing:.1em;margin-bottom:5px">STAP 3 — PUBLIEKE FEED</div>
+    <div style="background:#0c0e10;border:1px solid #1e2026;padding:9px;font-size:10px;color:#00ff9d;word-break:break-all;line-height:1.6;margin-bottom:8px" id="wm-feed">—</div>
+    <div style="font-size:10px;color:#8a8e98;line-height:1.7;margin-bottom:10px">Deel deze URL als bewijs van privacy. Iedereen ziet live wat de Wall blokkeert.</div>
+    <a id="wm-feedlink" href="#" target="_blank" rel="noopener" style="display:block;width:100%;padding:10px;background:#00ff9d;color:#0c0e10;font-family:inherit;font-size:10px;font-weight:800;text-align:center;text-decoration:none;margin-bottom:6px">>> Bekijk live feed</a>
+    <button onclick="wmClose()" style="width:100%;padding:8px;background:transparent;border:1px solid #2a2d35;color:#8a8e98;font-family:inherit;font-size:10px;cursor:pointer">Sluit</button>
+  </div>
+</div>
+
+</div>
+</div>
+
+<script>
+var _wmp = 'starter';
+function wmOpen(plan) {
+  _wmp = plan || 'starter';
+  if(typeof wmPlan==='function') wmPlan(_wmp, null);
+  var t = {starter:'STARTER \u2014 \u20ac19/mnd', pro:'PRO \u2014 \u20ac49/mnd', business:'BUSINESS \u2014 \u20ac99/mnd'};
+  var el = document.getElementById('wm-plan');
+  if (el) el.textContent = t[_wmp] || t.starter;
+  wmStep(1);
+  var m = document.getElementById('wm');
+  if (m) { m.style.display = 'flex'; m.style.flexDirection = 'column'; document.body.style.overflow = 'hidden'; }
+}
+function wmPlan(plan,el){
+  _wmp=plan;
+  var labels={starter:"STARTER — €19/mnd",pro:"PRO — €49/mnd",business:"BUSINESS — €99/mnd"};
+  ["starter","pro","business"].forEach(function(p){var d=document.getElementById("wmp-"+p);if(!d)return;if(p===plan){d.style.background="rgba(0,255,157,.06)";d.style.borderColor="rgba(0,255,157,.3)";d.style.color="#00ff9d";}else{d.style.background="#0c0e10";d.style.borderColor="#2a2d35";d.style.color="#8a8e98";}});
+  var tb=document.getElementById("wmp-test");if(tb){tb.style.background="#0c0e10";tb.style.borderColor="rgba(245,196,0,.25)";tb.style.color="#f5c400";}
+  var t=document.getElementById("wm-plan");if(t)t.textContent=labels[plan]||plan.toUpperCase();
+}
+function wmSelectTest(){
+  _wmp="test";
+  ["starter","pro","business"].forEach(function(p){
+    var d=document.getElementById("wmp-"+p);
+    if(d){d.style.background="#0c0e10";d.style.borderColor="#2a2d35";d.style.color="#8a8e98";}
+  });
+  var tb=document.getElementById("wmp-test");
+  if(tb){tb.style.background="rgba(245,196,0,.1)";tb.style.borderColor="#f5c400";tb.style.color="#f5c400";}
+  var t=document.getElementById("wm-plan");
+  if(t)t.textContent="TEST — €0.01 / 10 min";
+}
+function wmClose() {
+  var m = document.getElementById('wm');
+  if (m) { m.style.display = 'none'; document.body.style.overflow = ''; }
+}
+function wmStep(n) {
+  for (var i = 1; i <= 3; i++) {
+    var e = document.getElementById('wm-s' + i);
+    if (e) e.style.display = (i === n) ? 'block' : 'none';
+  }
+}
+function obGo(n) {
+  for (var i = 1; i <= 3; i++) {
+    var p = document.getElementById('op' + i);
+    if (p) p.style.display = (i === n) ? 'block' : 'none';
+    var d = document.getElementById('od' + i);
+    if (d) d.style.background = (i <= n) ? '#00ff9d' : '#2a2d35';
+  }
+}
+function wmCopy(sid, bid) {
+  var s = document.getElementById(sid);
+  var b = document.getElementById(bid);
+  if (!s || !b) return;
+  try { navigator.clipboard.writeText(s.textContent); } catch(e) {}
+  b.textContent = '[OK] Gekopieerd!';
+  setTimeout(function() {
+    b.textContent = sid === 'wm-key' ? '[COPY] Kopieer API key' : '[COPY] Kopieer snippet';
+  }, 2000);
+}
+document.addEventListener('DOMContentLoaded', function() {
+  
+  var str  = document.getElementById('wm-str');
+  if (pass && str) {
+    pass.addEventListener('input', function() {
+      var v = this.value, s = 0;
+      if (v.length >= 8) s++;
+      if (/[A-Z]/.test(v)) s++;
+      if (/[0-9]/.test(v)) s++;
+      if (/[^A-Za-z0-9]/.test(v)) s++;
+      str.style.width = (s * 25) + '%';
+      var c = ['#2a2d35','#ef4444','#f5c400','#00cc7a','#00ff9d'];
+      str.style.background = c[s] || c[0];
+    });
+  }
+  var modal = document.getElementById('wm');
+  if (modal) {
+    modal.addEventListener('click', function(e) { if (e.target === this) wmClose(); });
+  }
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') wmClose(); });
+  var rb = document.getElementById('register-btn');
+  if (rb) rb.addEventListener('click', function() { wmOpen('starter'); });
+});
+async function wmSubmit() {
+  var emailEl = document.getElementById('wm-email'); var email = (emailEl && emailEl.value) ? emailEl.value.trim() : '';
+  var pass = '';
+  var terms = document.getElementById('wm-terms').checked;
+  var err   = document.getElementById('wm-err');
+  var btn   = document.getElementById('wm-btn');
+  if (err) err.style.display = 'none';
+    if (!email || email.indexOf('@') < 1 ) { showWmErr('Vul een geldig e-mailadres in.'); return; }
+  
+  if (!terms) { showWmErr('Accepteer de voorwaarden om door te gaan.'); return; }
+  wmStep(2);
+  var steps = [
+    ['Account aanmaken...','E-mail valideren',20],
+    ['Beveiliging instellen...','API key genereren',50],
+    ['Configuratie laden...','Privacy template koppelen',75],
+    ['Snippet genereren...','Bijna klaar!',90]
+  ];
+  var si = 0;
+  var iv = setInterval(function() {
+    if (si >= steps.length) { clearInterval(iv); return; }
+    var s = steps[si++];
+    var lt = document.getElementById('wm-lt');
+    var ls = document.getElementById('wm-ls');
+    var pr = document.getElementById('wm-prog');
+    if (lt) lt.textContent = s[0];
+    if (ls) ls.textContent = s[1];
+    if (pr) pr.style.width = s[2] + '%';
+  }, 550);
+  try {
+    var r = await fetch('https://wall.paramant.app/api/auth/register', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email: email, plan: _wmp, acceptTerms: terms, domain: (document.getElementById('wm-domain')||{}).value||''})
+    });
+    var d;
+    try { d = await r.json(); } catch(pe) { throw new Error('Server antwoord onleesbaar.'); }
+    if (!d.ok) throw new Error(d.msg || d.error || 'Registratie mislukt (' + r.status + ')');
+    clearInterval(iv);
+    var pr = document.getElementById('wm-prog');
+    if (pr) pr.style.width = '100%';
+    setTimeout(function() {
+      if (d.checkout_url) { window.location.href = d.checkout_url; return; }
+      wmStep(3);
+      obGo(1);
+      var feedUrl = d.feed_url || ('https://wall.paramant.app/feed/' + (d.feed_hash || d.api_key.slice(3,15)));
+      var ak = document.getElementById('wm-key');      if (ak) ak.textContent = d.api_key || '';
+      var sn = document.getElementById('wm-snip');     if (sn) sn.textContent = d.snippet || '';
+      var fu = document.getElementById('wm-feed');     if (fu) fu.textContent = feedUrl;
+      var fl = document.getElementById('wm-feedlink'); if (fl) fl.href = feedUrl;
+      // Store token for dashboard
+      try { localStorage.setItem('wall_token', d.token || ''); } catch(e) {}
+      // Open Stripe checkout in new tab after 2s
+      
+    }, 400);
+  } catch(e) {
+    clearInterval(iv);
+    wmStep(1);
+    showWmErr(e.message);
+  }
+}
+function showWmErr(msg) {
+  var e = document.getElementById('wm-err');
+  if (e) { e.style.display = 'block'; e.textContent = '[!] ' + msg; }
+}
+function openModal(plan) { wmOpen(plan); }
+</script>
+</html>

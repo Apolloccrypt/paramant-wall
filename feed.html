@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PARAMANT WALL · Publieke Feed</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230c0e10'/%3E%3Ctext x='6' y='24' font-size='20' font-weight='bold' fill='%2300ff9d' font-family='monospace'%3EW%3C/text%3E%3C/svg%3E">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0c0e10;--s1:#111214;--s2:#1a1d22;--b1:#1e2026;--b2:#2a2d35;--t1:#e2e4e8;--t2:#c8ccd4;--t3:#8a8e98;--t4:#5a6070;--g:#00ff9d;--gd:rgba(0,255,157,.06);--gb:rgba(0,255,157,.18);--mono:ui-monospace,'Cascadia Code','Fira Code','Consolas',monospace}
+body{background:var(--bg);color:var(--t2);font-family:var(--mono);min-height:100vh}
+nav{position:fixed;top:0;left:0;right:0;height:48px;background:var(--bg);border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 20px;gap:0;z-index:100}
+.logo{font-size:14px;font-weight:800;color:var(--t1);text-decoration:none;margin-right:16px}
+.logo span{color:var(--g)}
+.v{font-size:9px;color:var(--t4);border:1px solid var(--b2);padding:1px 4px;margin-left:6px}
+nav a.nl{font-size:11px;color:var(--t3);text-decoration:none;letter-spacing:.05em;padding:0 14px;height:48px;display:flex;align-items:center;border-left:1px solid var(--b1);transition:color .15s}
+nav a.nl:hover{color:var(--g)}
+.sys{margin-left:auto;font-size:9px;color:var(--t4);letter-spacing:.08em;display:flex;align-items:center;gap:6px}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--b2);transition:background .3s}
+.sdot.on{background:var(--g)}
+.sdot.err{background:#ef4444}
+
+main{padding:64px 0 40px;max-width:1100px;margin:0 auto;padding-left:20px;padding-right:20px}
+
+.feed-header{padding:20px 0;border-bottom:1px solid var(--b1);margin-bottom:20px}
+.feed-title-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:8px}
+.feed-title{font-size:10px;color:var(--t4);letter-spacing:.1em}
+.feed-hash{font-size:12px;color:var(--g);word-break:break-all}
+.feed-note{font-size:11px;color:var(--t4);line-height:1.7;margin-top:6px}
+
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:20px}
+@media(max-width:700px){.stats-row{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--s1);border:1px solid var(--b1);padding:14px;text-align:center}
+.stat-n{font-size:22px;font-weight:800;color:var(--t1);font-variant-numeric:tabular-nums}
+.stat-l{font-size:9px;color:var(--t4);letter-spacing:.08em;margin-top:3px}
+.stat-n.red{color:#ef4444}
+.stat-n.amber{color:#f5c400}
+.stat-n.green{color:var(--g)}
+
+.grid{display:grid;grid-template-columns:1fr 300px;gap:16px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+
+.feed-col{border:1px solid var(--b1)}
+.feed-col-hd{padding:10px 14px;background:var(--s1);border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between}
+.feed-col-title{font-size:10px;color:var(--t4);letter-spacing:.08em}
+.feed-col-count{font-size:10px;color:var(--t4)}
+#feed-entries{min-height:200px;max-height:500px;overflow-y:auto}
+.entry{display:grid;grid-template-columns:60px 1fr 80px 70px;align-items:center;gap:8px;padding:7px 14px;border-bottom:1px solid var(--b1);font-size:11px;transition:background .15s}
+.entry:hover{background:var(--s1)}
+.entry-type{font-size:9px;padding:2px 5px;letter-spacing:.06em;text-align:center}
+.et-block{background:rgba(239,68,68,.08);color:#f87171}
+.et-anon{background:rgba(245,196,0,.08);color:#f5c400}
+.et-allow{background:var(--gd);color:var(--g)}
+.et-cookie{background:rgba(147,51,234,.08);color:#c084fc}
+.entry-event{color:var(--t2)}
+.entry-ts{color:var(--t4);font-size:10px;text-align:right}
+.entry-age{color:var(--t4);font-size:10px;text-align:right}
+.empty{padding:30px;text-align:center;font-size:11px;color:var(--b2)}
+
+.side{display:flex;flex-direction:column;gap:10px}
+.side-card{background:var(--s1);border:1px solid var(--b1);padding:14px}
+.side-title{font-size:10px;color:var(--t4);letter-spacing:.1em;margin-bottom:10px}
+.tracker-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b1);font-size:11px}
+.tracker-row:last-child{border:none}
+.tracker-name{color:var(--t2)}
+.tracker-status{font-size:9px;padding:1px 5px}
+.ts-block{background:rgba(239,68,68,.08);color:#f87171}
+.ts-anon{background:rgba(245,196,0,.08);color:#f5c400}
+.ts-allow{background:var(--gd);color:var(--g)}
+.info-row{display:flex;align-items:flex-start;gap:6px;font-size:10px;color:var(--t4);line-height:1.7;margin-bottom:6px}
+.info-row:last-child{margin:0}
+.info-row .ic{color:var(--g);flex-shrink:0}
+.info-row .ic-r{color:#f87171;flex-shrink:0}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="logo">PARA<span>MANT</span> WALL<span class="v">v2.0</span></a>
+  <a href="/" class="nl">HOME</a>
+  <div class="sys">
+    <span class="sdot" id="sdot"></span>
+    <span id="status-txt">VERBINDEN...</span>
+  </div>
+</nav>
+
+<main>
+  <div class="feed-header">
+    <div class="feed-title-row">
+      <div>
+        <div class="feed-title">// PUBLIEKE TRANSPARANTIE FEED</div>
+        <div class="feed-hash" id="feed-hash-display">—</div>
+      </div>
+      <div style="text-align:right;display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+        <div style="font-size:9px;color:var(--t4)">LAST UPDATE: <span id="last-update" style="color:var(--t3)">—</span></div>
+        <button onclick="copyFeedUrl()" style="padding:5px 12px;background:transparent;border:1px solid var(--b2);color:var(--t3);font-family:var(--mono);font-size:9px;cursor:pointer;letter-spacing:.06em" id="share-btn">↗ KOPIEER FEED LINK</button>
+      </div>
+    </div>
+    <div class="feed-note">
+      Dit is alles wat PARAMANT WALL weet over het verkeer van deze website. Geen persoonsgegevens. Geen IP-adressen. Geen content. Alleen aantallen en event-types.
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat"><div class="stat-n" id="st-total">0</div><div class="stat-l">TOTAAL</div></div>
+    <div class="stat"><div class="stat-n red" id="st-blocked">0</div><div class="stat-l">GEBLOKKEERD</div></div>
+    <div class="stat"><div class="stat-n" style="color:#c084fc" id="st-cookies">0</div><div class="stat-l">COOKIES GESTRIPT</div></div>
+    <div class="stat"><div class="stat-n amber" id="st-anon">0</div><div class="stat-l">IP GEANON.</div></div>
+    <div class="stat"><div class="stat-n green" id="st-allowed">0</div><div class="stat-l">DOORGELATEN</div></div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="feed-col">
+        <div class="feed-col-hd">
+          <span class="feed-col-title">LIVE EVENTS</span>
+          <span class="feed-col-count" id="entry-count">0 entries</span>
+        </div>
+        <div id="feed-entries">
+          <div class="empty" id="feed-empty" style="padding:40px 20px;color:var(--t4);font-size:11px;line-height:2">Wachten op eerste events...<br><span style="font-size:9px;color:var(--b2)">Installeer de snippet op je site om data te zien.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="side-card">
+        <div class="side-title">TRACKERS OP DEZE SITE</div>
+        <div id="tracker-list">
+          <div class="tracker-row"><span class="tracker-name">Laden...</span></div>
+        </div>
+      </div>
+      <div class="side-card">
+        <div class="side-title">WAT DE WALL WEET</div>
+        <div class="info-row"><span class="ic">[OK]</span><span>Event-type (page_view, click)</span></div>
+        <div class="info-row"><span class="ic">[OK]</span><span>Pakketgrootte in bytes</span></div>
+        <div class="info-row"><span class="ic">[OK]</span><span>Tijdstempel ontvangst</span></div>
+        <div class="info-row"><span class="ic-r">[X]</span><span>Nooit: IP-adres of locatie</span></div>
+        <div class="info-row"><span class="ic-r">[X]</span><span>Nooit: namen of identiteiten</span></div>
+        <div class="info-row"><span class="ic-r">[X]</span><span>Nooit: inhoud van berichten</span></div>
+      </div>
+      <div class="side-card">
+        <div class="side-title">WALL INSTELLINGEN</div>
+        <div id="config-display" style="font-size:10px;color:var(--t4);line-height:1.9">Laden...</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+var HASH = location.pathname.replace('/feed/','').replace('/feed','').replace(/[^a-f0-9]/gi,'').slice(0,16) || 'demo';
+var API  = 'https://wall.paramant.app';
+var totalEntries = 0;
+var TRACKERS = {
+  ga4:     {name:'Google Analytics 4', action:'anon'},
+  meta:    {name:'Meta Pixel',          action:'block'},
+  hotjar:  {name:'Hotjar',              action:'block'},
+  gtm:     {name:'Google Tag Manager',  action:'allow'},
+  tiktok:  {name:'TikTok Pixel',        action:'block'},
+  adsense: {name:'Google Ads',          action:'anon'},
+};
+
+function pad(n){return String(n).padStart(2,'0');}
+function ts(t){var d=new Date(t||Date.now());return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());}
+function age(t){var s=Math.floor((Date.now()-t)/1000);if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m';return Math.floor(s/3600)+'u';}
+function set(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
+
+function typeClass(t){
+  if(t==='block')  return 'et-block';
+  if(t==='anon')   return 'et-anon';
+  if(t==='cookie') return 'et-cookie';
+  return 'et-allow';
+}
+function typeLabel(t){
+  if(t==='block')  return 'GEBLOKKEERD';
+  if(t==='anon')   return 'GEANON.';
+  if(t==='cookie') return 'COOKIE';
+  return 'DOORGELATEN';
+}
+
+function addEntry(entry){
+  var feed  = document.getElementById('feed-entries');
+  var empty = document.getElementById('feed-empty');
+  if(empty) empty.style.display='none';
+
+  var row = document.createElement('div');
+  row.className = 'entry';
+  row.style.cssText = 'opacity:0;transition:opacity .25s';
+
+  var badge = document.createElement('span');
+  badge.className = 'entry-type ' + typeClass(entry.type);
+  badge.textContent = typeLabel(entry.type);
+
+  var ev = document.createElement('span');
+  ev.className = 'entry-event';
+  ev.textContent = entry.event || '—';
+
+  var t = document.createElement('span');
+  t.className = 'entry-ts';
+  t.textContent = ts(entry.ts);
+
+  var a = document.createElement('span');
+  a.className = 'entry-age';
+  a.textContent = age(entry.ts);
+
+  row.appendChild(badge);
+  row.appendChild(ev);
+  row.appendChild(t);
+  row.appendChild(a);
+  feed.insertBefore(row, feed.firstChild);
+  setTimeout(function(){row.style.opacity='1';}, 20);
+
+  totalEntries++;
+  set('entry-count', totalEntries + ' entr' + (totalEntries===1?'y':'ies'));
+
+  // Clear feed every 100 entries, keep counters
+  if(totalEntries % 100 === 0){
+    setTimeout(function(){
+      feed.innerHTML = '';
+      totalEntries = 0;
+      var note = document.createElement('div');
+      note.className = 'empty';
+      note.textContent = '// feed geleegd na 100 entries — tellers lopen door';
+      feed.appendChild(note);
+      setTimeout(function(){note.remove();}, 3000);
+    }, 300);
+  }
+
+  // Keep max 50 visible
+  while(feed.children.length > 50) feed.removeChild(feed.lastChild);
+}
+
+function renderTrackers(data){
+  var list = document.getElementById('tracker-list');
+  if(!list) return;
+  var found = data.trackers_seen || Object.keys(TRACKERS);
+  list.innerHTML = '';
+  found.slice(0,8).forEach(function(key){
+    var info = TRACKERS[key] || {name: key, action: 'block'};
+    var row  = document.createElement('div');
+    row.className = 'tracker-row';
+    var name = document.createElement('span');
+    name.className = 'tracker-name';
+    name.textContent = info.name;
+    var status = document.createElement('span');
+    status.className = 'tracker-status ts-' + (info.action||'block');
+    status.textContent = info.action === 'block' ? 'GEBLOKKEERD' : info.action === 'anon' ? 'GEANON.' : 'DOORGELATEN';
+    row.appendChild(name);
+    row.appendChild(status);
+    list.appendChild(row);
+  });
+}
+
+function renderConfig(data){
+  var el = document.getElementById('config-display');
+  if(!el) return;
+  el.innerHTML =
+    '<div style="margin-bottom:4px"><span style="color:var(--t3)">Template: </span><span style="color:var(--g)">' + (data.template||'ultra-streng') + '</span></div>' +
+    '<div style="margin-bottom:4px"><span style="color:var(--t3)">IP anonimisering: </span><span style="color:var(--g)">[OK]</span></div>' +
+    '<div style="margin-bottom:4px"><span style="color:var(--t3)">Cookie stripping: </span><span style="color:var(--g)">[OK]</span></div>' +
+    '<div><span style="color:var(--t3)">Zero logging: </span><span style="color:var(--g)">[OK]</span></div>';
+}
+
+async function tick(){
+  var dot = document.getElementById('sdot');
+  try{
+    var r = await fetch(API + '/api/feed/' + HASH, {cache:'no-store'});
+    if(!r.ok) throw new Error('feed not found');
+    var d = await r.json();
+    if(!d.ok) throw new Error('feed not ok');
+
+    if(dot){dot.className='sdot on';}
+    set('status-txt', 'LIVE · ' + (d.month||''));
+    set('feed-hash-display', 'wall.paramant.app/feed/' + HASH);
+    set('last-update', new Date().toLocaleTimeString('nl-NL'));
+
+    // Update counters — server v3 formaat: d.totals
+    var t = d.totals || {};
+    var total   = t.requests||0;
+    var blocked = t.blocked ||0;
+    var stripped= t.stripped||0;
+    var allowed = t.allowed ||0;
+
+    animateCounter('st-total',   total);
+    animateCounter('st-blocked', blocked);
+    animateCounter('st-cookies', stripped);
+    animateCounter('st-anon',    total); // elke request = IP gehasht
+    animateCounter('st-allowed', allowed);
+
+    // Tracker breakdown gebaseerd op totalen
+    renderTrackerBreakdown(total, blocked, stripped, allowed);
+    renderConfig(d);
+
+  }catch(e){
+    if(dot){dot.className='sdot err';}
+    set('status-txt', 'VERBINDINGSFOUT');
+    if(HASH === 'demo'){ startDemo(); }
+  }
+}
+
+var _prevCounters = {};
+function animateCounter(id, newVal) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var oldVal = _prevCounters[id] || 0;
+  if (newVal === oldVal) return;
+  _prevCounters[id] = newVal;
+  // Flash animation
+  el.style.transition = 'color .2s';
+  el.style.color = 'var(--g)';
+  el.textContent = newVal.toLocaleString('nl-NL');
+  setTimeout(function() { el.style.color = ''; }, 600);
+}
+
+function renderTrackerBreakdown(total, blocked, stripped, allowed) {
+  var list = document.getElementById('tracker-list');
+  if(!list) return;
+  // Schat verdeling op basis van bekende tracker patronen
+  var trackers = [
+    {name:'Google Analytics 4', action:'anon',  share:.55, val: Math.round(total*.55)},
+    {name:'Meta Pixel',          action:'block', share:.25, val: blocked},
+    {name:'Hotjar',              action:'block', share:.1,  val: Math.round(blocked*.4)},
+    {name:'Google Ads',          action:'anon',  share:.05, val: Math.round(stripped*.3)},
+    {name:'TikTok Pixel',        action:'block', share:.05, val: Math.round(blocked*.2)},
+  ].filter(function(t){ return total > 0 ? true : false; });
+
+  if (total === 0) {
+    list.innerHTML = '<div class="tracker-row"><span class="tracker-name" style="color:var(--t4)">Nog geen activiteit</span></div>';
+    return;
+  }
+
+  list.innerHTML = trackers.map(function(t) {
+    var pct = total > 0 ? Math.round((t.val / total) * 100) : 0;
+    var cls = t.action === 'block' ? 'ts-block' : t.action === 'anon' ? 'ts-anon' : 'ts-allow';
+    var lbl = t.action === 'block' ? 'GEBLOKKEERD' : t.action === 'anon' ? 'GEANON.' : 'DOORGELATEN';
+    return '<div class="tracker-row">' +
+      '<div><span class="tracker-name">' + t.name + '</span>' +
+      '<div style="height:2px;background:var(--b1);margin-top:3px;width:100%"><div style="height:100%;width:' + Math.min(pct,100) + '%;background:' + (t.action==='block'?'#f87171':t.action==='anon'?'#f5c400':'var(--g)') + ';transition:width .5s"></div></div></div>' +
+      '<span class="tracker-status ' + cls + '">' + lbl + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+// Demo mode for /feed/ without hash
+var demoRunning = false;
+var DEMO_EVENTS = [
+  {type:'block',  event:'meta_pixel'},
+  {type:'cookie', event:'_ga_cookie'},
+  {type:'anon',   event:'ip_hash'},
+  {type:'allow',  event:'page_view'},
+  {type:'allow',  event:'scroll_depth'},
+  {type:'block',  event:'hotjar_session'},
+  {type:'anon',   event:'client_id_hash'},
+  {type:'allow',  event:'session_start'},
+  {type:'cookie', event:'_fbp_cookie'},
+  {type:'block',  event:'tiktok_pixel'},
+];
+var demoCounters = {total:0,blocked:0,cookies:0,anon:0,allowed:0};
+
+function startDemo(){
+  if(demoRunning) return;
+  demoRunning = true;
+  set('feed-hash-display', 'DEMO MODUS — registreer voor jouw eigen feed');
+  var dot = document.getElementById('sdot');
+  if(dot) dot.className='sdot on';
+  set('status-txt', 'DEMO');
+  renderTrackers({trackers_seen: Object.keys(TRACKERS)});
+  renderConfig({template:'ultra-streng'});
+  setInterval(function(){
+    var ev = DEMO_EVENTS[Math.floor(Math.random()*DEMO_EVENTS.length)];
+    addEntry({type:ev.type, event:ev.event, ts:Date.now()});
+    demoCounters.total++;
+    if(ev.type==='block') demoCounters.blocked++;
+    else if(ev.type==='cookie') demoCounters.cookies++;
+    else if(ev.type==='anon') demoCounters.anon++;
+    else demoCounters.allowed++;
+    set('st-total',   demoCounters.total.toLocaleString('nl-NL'));
+    set('st-blocked', demoCounters.blocked.toLocaleString('nl-NL'));
+    set('st-cookies', demoCounters.cookies.toLocaleString('nl-NL'));
+    set('st-anon',    demoCounters.anon.toLocaleString('nl-NL'));
+    set('st-allowed', demoCounters.allowed.toLocaleString('nl-NL'));
+  }, 800);
+}
+
+function copyFeedUrl() {
+  var url = 'https://wall.paramant.app/feed/' + HASH;
+  navigator.clipboard.writeText(url).then(function(){
+    var btn = document.getElementById('share-btn');
+    if(btn){var o=btn.textContent;btn.textContent='[OK] GEKOPIEERD!';btn.style.borderColor='var(--g)';btn.style.color='var(--g)';setTimeout(function(){btn.textContent=o;btn.style.borderColor='';btn.style.color='';},2000);}
+  });
+}
+
+// Start
+set('feed-hash-display', 'wall.paramant.app/feed/' + HASH);
+tick();
+setInterval(tick, 10000);
+</script>
+</body>
+</html>

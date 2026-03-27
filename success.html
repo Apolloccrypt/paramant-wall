@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PARAMANT WALL — Activatie</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230c0e10'/%3E%3Ctext x='4' y='24' font-size='22' font-weight='bold' fill='%2300ff9d' font-family='monospace'%3EW%3C/text%3E%3C/svg%3E">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c0e10;--s1:#111214;--b1:#1e2026;--b2:#2a2d35;
+  --t1:#e2e4e8;--t2:#c8ccd4;--t3:#8a8e98;--t4:#5a6070;
+  --g:#00ff9d;--gd:rgba(0,255,157,.06);--gb:rgba(0,255,157,.18);
+  --mono:ui-monospace,'Cascadia Code','Fira Code','Consolas',monospace;
+}
+body{background:var(--bg);color:var(--t2);font-family:var(--mono);min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;height:48px;background:var(--bg);border-bottom:1px solid var(--b1);display:flex;align-items:stretch;z-index:200}
+.nav-logo{display:flex;align-items:center;gap:8px;padding:0 20px;border-right:1px solid var(--b1);text-decoration:none;flex-shrink:0}
+.nav-logo .n{font-size:14px;font-weight:800;color:var(--t1)}.nav-logo .w{color:var(--g)}
+.nav-links{display:flex;align-items:stretch}
+.nav-links a{font-size:11px;color:var(--t3);text-decoration:none;letter-spacing:.05em;padding:0 14px;display:flex;align-items:center;border-right:1px solid var(--b1);transition:color .15s}
+.nav-links a:hover{color:var(--g)}
+.nav-right{margin-left:auto;display:flex;align-items:center;padding:0 16px;border-left:1px solid var(--b1);font-size:10px;color:var(--t4)}
+
+/* PAGE */
+.page{max-width:640px;margin:0 auto;padding:80px 24px 60px}
+
+/* STEPS */
+.steps{display:flex;gap:0;margin-bottom:32px;border:1px solid var(--b1)}
+.step{flex:1;padding:12px 14px;border-right:1px solid var(--b1);font-size:9px;letter-spacing:.08em;color:var(--t4);cursor:pointer;transition:all .15s;text-transform:uppercase}
+.step:last-child{border-right:none}
+.step.active{background:var(--gd);color:var(--g);border-bottom:2px solid var(--g)}
+.step.done{color:var(--t3)}
+.step-num{display:block;font-size:8px;color:var(--t4);margin-bottom:2px}
+
+/* CARD */
+.card{background:var(--s1);border:1px solid var(--b1);padding:24px;margin-bottom:16px}
+.card-title{font-size:9px;color:var(--t4);letter-spacing:.12em;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title .dot{width:6px;height:6px;border-radius:50%;background:var(--g);flex-shrink:0}
+
+/* LOADING */
+.loading{text-align:center;padding:48px 24px}
+.load-icon{font-size:32px;color:var(--g);margin-bottom:16px;animation:spin 1s linear infinite;display:inline-block}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.load-title{font-size:14px;font-weight:800;color:var(--t1);margin-bottom:8px}
+.load-sub{font-size:11px;color:var(--t4);line-height:1.8}
+.load-bar{height:2px;background:var(--b1);margin-top:20px;border-radius:1px}
+.load-fill{height:100%;background:var(--g);width:0%;transition:width .5s ease;border-radius:1px}
+
+/* VALUE DISPLAY */
+.val-box{background:var(--bg);border:1px solid var(--gb);padding:12px 14px;font-size:11px;color:var(--g);word-break:break-all;line-height:1.7;margin-bottom:8px;position:relative}
+.val-box.secret{border-color:rgba(239,68,68,.25)}
+.copy-btn{width:100%;padding:8px;background:var(--s1);border:1px solid var(--b2);color:var(--t3);font-family:var(--mono);font-size:10px;cursor:pointer;letter-spacing:.04em;transition:all .15s;margin-bottom:12px}
+.copy-btn:hover{border-color:var(--g);color:var(--g)}
+
+/* WARN */
+.warn{padding:8px 12px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);color:#f87171;font-size:10px;line-height:1.7;margin-bottom:16px}
+.info{padding:8px 12px;background:var(--gd);border:1px solid var(--gb);color:var(--g);font-size:10px;line-height:1.7;margin-bottom:16px}
+
+/* BTNS */
+.btn-g{display:block;width:100%;padding:12px;background:var(--g);color:var(--bg);font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.08em;border:none;cursor:pointer;text-align:center;text-decoration:none;transition:background .15s;margin-bottom:8px}
+.btn-g:hover{background:#00cc7a}
+.btn-ghost{display:block;width:100%;padding:10px;background:transparent;border:1px solid var(--b2);color:var(--t3);font-family:var(--mono);font-size:10px;cursor:pointer;letter-spacing:.04em;transition:all .15s;text-align:center;text-decoration:none}
+.btn-ghost:hover{border-color:var(--g);color:var(--g)}
+
+/* PLAN BADGE */
+.plan-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--gd);border:1px solid var(--gb);font-size:9px;color:var(--g);letter-spacing:.1em;margin-bottom:16px}
+
+/* CHECKLIST */
+.checklist{list-style:none}
+.checklist li{padding:8px 0;border-bottom:1px solid var(--b1);font-size:11px;color:var(--t3);display:flex;align-items:center;gap:8px}
+.checklist li:last-child{border:none}
+.ck{color:var(--g);font-size:12px}
+
+/* ERROR */
+.error-state{text-align:center;padding:48px 24px}
+.error-icon{font-size:28px;color:#f87171;margin-bottom:12px}
+.error-title{font-size:14px;font-weight:800;color:var(--t1);margin-bottom:8px}
+.error-sub{font-size:11px;color:var(--t4);line-height:1.8}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo"><span class="n">PARAMANT</span><span class="w"> WALL</span></a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/#hoe">Hoe het werkt</a>
+    <a href="/#pricing">Prijzen</a>
+  </div>
+  <div class="nav-right" id="nav-status">Account activeren...</div>
+</nav>
+
+<div class="page">
+
+  <!-- Steps indicator -->
+  <div class="steps">
+    <div class="step done" id="step1"><span class="step-num">01</span>Registratie</div>
+    <div class="step done" id="step2"><span class="step-num">02</span>Betaling</div>
+    <div class="step active" id="step3"><span class="step-num">03</span>Activatie</div>
+    <div class="step" id="step4"><span class="step-num">04</span>Installatie</div>
+  </div>
+
+  <!-- Loading state -->
+  <div id="loading-state">
+    <div class="loading">
+      <div class="load-icon">⟳</div>
+      <div class="load-title">Account activeren...</div>
+      <div class="load-sub">
+        Betaling verwerkt. Account wordt aangemaakt.<br>
+        Dit duurt maximaal 10 seconden.
+      </div>
+      <div class="load-bar"><div class="load-fill" id="load-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- Success state -->
+  <div id="success-state" style="display:none">
+
+    <div class="info">
+      ✓ Betaling geslaagd · Account actief · Wall klaar voor installatie
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>JOUW API KEY</div>
+      <div class="warn">[!] Sla deze key veilig op. Hij wordt nooit opnieuw getoond. Verloren = nieuw account aanmaken.</div>
+      <div class="val-box secret" id="val-key">—</div>
+      <button class="copy-btn" onclick="copyVal('val-key', this)">[COPY] Kopieer API key</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>SNIPPET — PLAK IN &lt;HEAD&gt;</div>
+      <div class="val-box" id="val-snippet">—</div>
+      <button class="copy-btn" onclick="copyVal('val-snippet', this)">[COPY] Kopieer snippet</button>
+      <div style="font-size:10px;color:var(--t4);line-height:1.8">
+        Plak dit script in de <code style="color:var(--g)">&lt;head&gt;</code> van elke pagina.<br>
+        Wall is direct actief na plaatsing. Geen verdere configuratie nodig.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>PUBLIEKE TRANSPARANTIE FEED</div>
+      <div style="font-size:11px;color:var(--t3);line-height:1.8;margin-bottom:12px">
+        Deze URL toont live hoeveel trackers geblokkeerd worden op jouw site.<br>
+        Deel hem met bezoekers als bewijs van privacy.
+      </div>
+      <div class="val-box" id="val-feed">—</div>
+      <a class="btn-g" id="feed-link" href="#" target="_blank" rel="noopener">>> Bekijk live feed</a>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>INSTALLATIE CHECKLIST</div>
+      <ul class="checklist">
+        <li><span class="ck">✓</span> Account aangemaakt & actief</li>
+        <li><span class="ck">✓</span> API key gegenereerd</li>
+        <li id="check-snippet" style="color:var(--t4)"><span style="color:var(--b2)">○</span> Snippet geplaatst in &lt;head&gt;</li>
+        <li id="check-feed" style="color:var(--t4)"><span style="color:var(--b2)">○</span> Feed gedeeld met bezoekers</li>
+      </ul>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <a href="/" class="btn-ghost">← Terug naar home</a>
+      <a id="feed-btn" href="#" target="_blank" class="btn-g" style="margin-bottom:0">>> Bekijk feed</a>
+    </div>
+
+  </div>
+
+  <!-- Error state -->
+  <div id="error-state" style="display:none">
+    <div class="error-state">
+      <div class="error-icon">⚠</div>
+      <div class="error-title">Account nog niet actief</div>
+      <div class="error-sub" id="error-msg">
+        De betaling is verwerkt maar het account is nog niet actief.<br>
+        Je ontvangt een e-mail zodra dit klaar is.<br><br>
+        Heb je al betaald? Wacht 30 seconden en ververs de pagina.
+      </div>
+      <br>
+      <button class="btn-g" onclick="location.reload()" style="max-width:300px;margin:0 auto">↺ Ververs pagina</button>
+      <br>
+      <a href="/" class="btn-ghost" style="max-width:300px;margin:0 auto">← Terug naar home</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var s = (location.search.match(/[?&]s=([^&]+)/) || [])[1] || '';
+var v = (location.search.match(/[?&]view=([^&]+)/) || [])[1] || '';
+var param = s ? '?s=' + encodeURIComponent(s) : v ? '?view=' + encodeURIComponent(v) : '';
+
+// Animate loading bar
+var pct = 0;
+var fillEl = document.getElementById('load-fill');
+var fillIv = setInterval(function() {
+  pct = Math.min(pct + 2, 90);
+  if (fillEl) fillEl.style.width = pct + '%';
+}, 200);
+
+function copyVal(id, btn) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent.trim()).then(function() {
+    var orig = btn.textContent;
+    btn.textContent = '[OK] Gekopieerd!';
+    btn.style.borderColor = 'var(--g)';
+    btn.style.color = 'var(--g)';
+    // Mark checklist
+    if (id === 'val-snippet') {
+      var c = document.getElementById('check-snippet');
+      if (c) { c.innerHTML = '<span style="color:var(--g)">✓</span> Snippet gekopieerd — plak in &lt;head&gt;'; c.style.color = 'var(--t2)'; }
+    }
+    setTimeout(function() {
+      btn.textContent = orig;
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    }, 2500);
+  });
+}
+
+function showSuccess(d) {
+  clearInterval(fillIv);
+  if (fillEl) fillEl.style.width = '100%';
+
+  setTimeout(function() {
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('success-state').style.display = 'block';
+
+    document.getElementById('val-key').textContent     = d.api_key || '—';
+    document.getElementById('val-snippet').textContent = d.snippet || '—';
+    document.getElementById('val-feed').textContent    = d.feed_url || '—';
+
+    var fl = document.getElementById('feed-link');
+    var fb = document.getElementById('feed-btn');
+    if (fl && d.feed_url) fl.href = d.feed_url;
+    if (fb && d.feed_url) fb.href = d.feed_url;
+
+    var ns = document.getElementById('nav-status');
+    if (ns) ns.textContent = '✓ Account actief · ' + (d.plan || 'starter').toUpperCase();
+
+    var step4 = document.getElementById('step4');
+    if (step4) { step4.className = 'step active'; }
+    var step3 = document.getElementById('step3');
+    if (step3) { step3.className = 'step done'; }
+  }, 300);
+}
+
+function showError(msg) {
+  clearInterval(fillIv);
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('error-state').style.display = 'block';
+  if (msg) {
+    var em = document.getElementById('error-msg');
+    if (em) em.textContent = msg;
+  }
+}
+
+function load(attempt) {
+  if (!param) {
+    showError('Geen sessie gevonden. Ga terug naar de homepage en probeer opnieuw.');
+    return;
+  }
+  
+  // Update loading tekst
+  var lt = document.getElementById('load-title');
+  var msgs = ['Account activeren...', 'Betaling verifiëren...', 'Key genereren...', 'Feed aanmaken...', 'Bijna klaar...'];
+  if (lt) lt.textContent = msgs[Math.min(attempt, msgs.length-1)];
+
+  fetch('/api/success-data' + param)
+    .then(function(r) {
+      if (r.status === 410) {
+        // Session expired
+        showRetry('Betalingssessie verlopen.', 'Ga terug en probeer opnieuw.');
+        return null;
+      }
+      if (r.status === 402) {
+        // Payment failed
+        showRetry('Betaling niet geslaagd.', 'Controleer je betaalgegevens en probeer opnieuw.');
+        return null;
+      }
+      return r.json();
+    })
+    .then(function(d) {
+      if (!d) return;
+      if (d.ok) {
+        showSuccess(d);
+      } else if (d.error === 'pending') {
+        // Webhook nog onderweg - wacht langer
+        if (attempt < 15) {
+          setTimeout(function() { load(attempt + 1); }, 2000);
+        } else {
+          showPending(d.email);
+        }
+      } else if (d.error === 'session_expired') {
+        showRetry('Betalingssessie verlopen.', 'Ga terug en probeer opnieuw.');
+      } else if (attempt < 10) {
+        setTimeout(function() { load(attempt + 1); }, 2000);
+      } else {
+        showPending('');
+      }
+    })
+    .catch(function() {
+      if (attempt < 10) {
+        setTimeout(function() { load(attempt + 1); }, 2500);
+      } else {
+        showError('Verbindingsfout. Ververs de pagina of check je e-mail.');
+      }
+    });
+}
+
+function showRetry(title, msg) {
+  clearInterval(fillIv);
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('error-state').style.display = 'block';
+  var et = document.querySelector('.error-title');
+  var em = document.getElementById('error-msg');
+  if (et) et.textContent = title;
+  if (em) em.innerHTML = msg + '<br><br>Er is niets in rekening gebracht.';
+  // Voeg retry knop toe
+  var eb = document.querySelector('.error-state');
+  if (eb && !document.getElementById('retry-btn')) {
+    var btn = document.createElement('a');
+    btn.id = 'retry-btn';
+    btn.href = '/#pricing';
+    btn.className = 'btn-g';
+    btn.style.cssText = 'max-width:300px;margin:16px auto 0;display:block';
+    btn.textContent = '>> Probeer opnieuw';
+    eb.appendChild(btn);
+  }
+}
+
+function showPending(email) {
+  clearInterval(fillIv);
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('error-state').style.display = 'block';
+  var et = document.querySelector('.error-title');
+  var em = document.getElementById('error-msg');
+  if (et) et.textContent = 'Account wordt nog geactiveerd';
+  if (em) em.innerHTML = 'Je betaling is ontvangen maar activatie duurt iets langer.<br>' +
+    (email ? 'We sturen een bevestiging naar <strong>' + email + '</strong>.<br><br>' : '<br>') +
+    'Ververs de pagina over 30 seconden.';
+}
+
+load(0);
+</script>
+</body>
+</html>
