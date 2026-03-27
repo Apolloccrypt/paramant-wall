@@ -873,6 +873,72 @@ async function revokeKey(apiKey, reason) {
 
 // ── Security event logger (geen PII) ─────────────────────────────────────
 async function logSecurityEvent(eventType, meta) {
+// ── API Key rotatie ──────────────────────────────────────────────
+app.post('/api/auth/rotate-key', async function(req, res) {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.replace('Bearer ', '').trim();
+  if (!token) return res.status(401).json({ error: 'unauthorized' });
+
+  try {
+    // Valideer token → zoek user
+    const tokenHash = sha256(token);
+    const vtRow = await pg.query(
+      'SELECT user_id FROM view_tokens WHERE token_hash=$1 AND expires_at > NOW() LIMIT 1',
+      [tokenHash]
+    );
+    if (!vtRow.rows.length) return res.status(401).json({ error: 'invalid_token' });
+    const userId = vtRow.rows[0].user_id;
+
+    // Haal huidige API key op
+    const custRow = await pg.query(
+      'SELECT id, api_key FROM customers WHERE user_id=$1 AND enabled=true LIMIT 1',
+      [userId]
+    );
+    if (!custRow.rows.length) return res.status(404).json({ error: 'customer_not_found' });
+
+    const oldKey  = custRow.rows[0].api_key;
+    const custId  = custRow.rows[0].id;
+
+    // Genereer nieuwe key
+    const newKey  = 'wk_' + require('crypto').randomBytes(24).toString('hex');
+
+    // Sla nieuwe key op + revoke oude in één transactie
+    const client = await pg.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        'UPDATE customers SET api_key=$1 WHERE id=$2',
+        [newKey, custId]
+      );
+      await client.query('COMMIT');
+    } catch(e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+
+    // Revoke oude key in Redis
+    await revokeKey(oldKey, 'rotated');
+
+    // Cache nieuwe key alvast
+    const cacheKey = 'wk:' + sha256(newKey);
+    await redisSet(cacheKey, JSON.stringify({ id: custId, api_key: newKey, enabled: true }), 60);
+
+    await logSecurityEvent('key_rotated', { customer_id: custId }).catch(function(){});
+
+    return res.json({
+      ok: true,
+      api_key: newKey,
+      snippet: `<script src="https://wall.paramant.app/snippet.js?k=${newKey}" async></script>`,
+      message: 'Oude key direct ongeldig. Update snippet.js op je website.'
+    });
+  } catch(e) {
+    console.error('[WALL] Key rotation error:', e.message);
+    return res.status(500).json({ error: 'rotation_failed' });
+  }
+});
+
   const allowed = ['key_activated','key_revoked','rate_limit_hit','domain_blocked',
                    'invalid_key_attempt','gdpr_delete','webhook_received','pending_cleanup'];
   if (allowed.indexOf(eventType) < 0) return;
