@@ -20,16 +20,16 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 // ── Cluster ──────────────────────────────────────────────────────
 if (cluster.isPrimary) {
   const n = Math.min(os.cpus().length, 2);
-  console.log('[WALL] Cluster: ' + n + ' workers starting');
+
   for (let i = 0; i < n; i++) cluster.fork();
   cluster.on('exit', function(w) {
-    console.log('[WALL] Worker ' + w.process.pid + ' died, restarting');
+
     cluster.fork();
   });
   // Heartbeat log
   setInterval(function() {
     const ws = Object.values(cluster.workers);
-    console.log('[WALL] Cluster: ' + ws.length + ' workers active');
+
   }, 5 * 60 * 1000);
   return;
 }
@@ -47,6 +47,9 @@ app.use(express.json({ limit: '32kb' }));
 app.use(function(req, res, next) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'");
+  res.setHeader('Permissions-Policy', 'geolocation=(), camera=(), microphone=()');
+  res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Cache-Control', 'no-store');
   next();
@@ -420,7 +423,7 @@ async function handleStripeWebhook(req, res) {
         });
 
       } catch(e) {
-        console.error('[WALL] Webhook activatie error:', e.message);
+        console.error('[WALL] Webhook activatie error:', e.code || e.message.slice(0,50));
       }
     }
   }
@@ -662,7 +665,7 @@ async function getCustomer(apiKey) {
   if (cached) { try { return JSON.parse(cached); } catch { return null; } }
   try {
     const r = await pg.query(
-      `SELECT c.id, c.plan, c.enabled, c.config, p.feed_hash
+      `SELECT c.id, c.plan, c.enabled, c.config, p.feed_hash, p.allowed_domains
        FROM customers c
        JOIN projects p ON p.customer_id_ref = c.id
        WHERE c.api_key = $1 AND c.enabled = true LIMIT 1`,
@@ -678,6 +681,21 @@ async function requireCustomer(req, res, next) {
   const apiKey = (req.headers['x-wall-key'] || req.headers['x-api-key'] || req.query._wk || req.query.k || '').trim();
   const customer = await getCustomer(apiKey);
   if (!customer) return res.status(401).json({ error: 'invalid_key' });
+  // Domain lock: Origin + Referer check
+  const _doms = Array.isArray(customer.allowed_domains) ? customer.allowed_domains.filter(function(x){ return x && x.length > 0; }) : [];
+  if (_doms.length > 0) {
+    const _clean = function(h) { return (h || '').replace(/^https?:\/\//, '').replace(/\/.*/, '').replace(/^www\./, '').toLowerCase().trim(); };
+    const _origin  = _clean(req.headers['origin']);
+    const _referer = _clean(req.headers['referer']);
+    const _reqDom  = _origin || _referer;
+    const _domOk   = _reqDom && _doms.some(function(d) {
+      const _d = d.toLowerCase().trim();
+      return _reqDom === _d || _reqDom.endsWith('.' + _d);
+    });
+    if (!_domOk) {
+      return res.status(403).json({ error: 'domain_not_allowed', domain: _reqDom, allowed: _doms });
+    }
+  }
   req.customer = customer;
   req.apiKey   = apiKey;
   next();
@@ -817,12 +835,12 @@ app.get('/stats', async function(req, res) {
 async function sendActivationEmail({ email, viewLink, feedUrl, plan, wasReplaced }) {
   // Gebruik nodemailer of SMTP als geconfigureerd
   // Voor nu: log de link (productie: vervang met echte mailer)
-  console.log('[WALL] Activation email to:', email, '| link:', viewLink);
+
   // TODO: implementeer SMTP via process.env.SMTP_HOST etc.
 }
 
 async function sendMagicLinkEmail(email, link) {
-  console.log('[WALL] Magic link to:', email, '| link:', link);
+
   // TODO: implementeer SMTP
 }
 
@@ -838,5 +856,5 @@ app.use(function(err, req, res, next) { res.status(500).json({ error: 'internal_
 
 // ── Start ─────────────────────────────────────────────────────────
 http.createServer(app).listen(PORT, '127.0.0.1', function() {
-  console.log('[WALL] Worker ' + process.pid + ' listening on ' + PORT);
+
 });
