@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PARAMANT WALL — Privacy Policy</title>
+<meta name="description" content="Volledige en eerlijke privacyverklaring van PARAMANT WALL. Wat we opslaan. Wat we nooit opslaan. En waarom.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230c0e10'/%3E%3Ctext x='4' y='24' font-size='22' font-weight='bold' fill='%2300ff9d' font-family='monospace'%3EW%3C/text%3E%3C/svg%3E">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0c0e10;--s1:#111214;--b1:#1e2026;--b2:#2a2d35;--t1:#e2e4e8;--t2:#c8ccd4;--t3:#8a8e98;--t4:#5a6070;--g:#00ff9d;--gd:rgba(0,255,157,.06);--gb:rgba(0,255,157,.18);--re:rgba(239,68,68,.08);--rb:rgba(239,68,68,.2);--mono:ui-monospace,'Cascadia Code','Fira Code','Consolas',monospace;}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--t2);font-family:var(--mono);-webkit-font-smoothing:antialiased;font-size:13px;line-height:1.7}
+::-webkit-scrollbar{width:2px}::-webkit-scrollbar-thumb{background:var(--b2)}
+
+nav{position:sticky;top:0;height:48px;background:var(--bg);border-bottom:1px solid var(--b1);display:flex;align-items:stretch;z-index:100}
+.nav-logo{display:flex;align-items:center;gap:8px;padding:0 20px;border-right:1px solid var(--b1);text-decoration:none}
+.nav-logo .n{font-size:14px;font-weight:800;color:var(--t1)}.nav-logo .w{color:var(--g)}
+.nav-back{display:flex;align-items:center;padding:0 16px;font-size:11px;color:var(--t4);text-decoration:none;border-right:1px solid var(--b1);transition:color .15s}
+.nav-back:hover{color:var(--g)}
+.nav-ts{margin-left:auto;display:flex;align-items:center;padding:0 16px;font-size:9px;color:var(--t4);border-left:1px solid var(--b1);white-space:nowrap}
+
+.page{max-width:720px;margin:0 auto;padding:48px 24px 96px}
+
+/* Header */
+.doc-header{margin-bottom:48px;padding-bottom:24px;border-bottom:1px solid var(--b1)}
+.doc-lbl{font-size:9px;color:var(--t4);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+.doc-title{font-size:clamp(22px,3vw,36px);font-weight:800;color:var(--t1);line-height:1.1;margin-bottom:12px}
+.doc-version{display:inline-flex;align-items:center;gap:8px;font-size:10px;color:var(--t4);border:1px solid var(--b2);padding:3px 10px;margin-bottom:16px}
+.doc-summary{font-size:12px;color:var(--t3);line-height:1.9;max-width:580px}
+
+/* TL;DR blok */
+.tldr{background:var(--gd);border:1px solid var(--gb);border-left:3px solid var(--g);padding:20px 22px;margin-bottom:40px}
+.tldr-title{font-size:10px;color:var(--g);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px}
+.tldr-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;font-size:11px;color:var(--t2);line-height:1.6}
+.tldr-row:last-child{margin-bottom:0}
+.tldr-ic{flex-shrink:0;color:var(--g);font-weight:700}
+
+/* Sectie structuur */
+.section{margin-bottom:40px}
+.section-num{font-size:9px;color:var(--t4);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+.section-title{font-size:16px;font-weight:800;color:var(--t1);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--b1)}
+.section p{font-size:12px;color:var(--t3);line-height:1.9;margin-bottom:12px}
+.section p:last-child{margin-bottom:0}
+.section strong{color:var(--t2)}
+.section a{color:var(--g);text-decoration:none}
+.section a:hover{text-decoration:underline}
+
+/* Tabel: wat we opslaan */
+.data-table{width:100%;border-collapse:collapse;margin:16px 0}
+.data-table th{padding:8px 12px;text-align:left;font-size:9px;letter-spacing:.1em;color:var(--t4);border-bottom:1px solid var(--b1);font-weight:400}
+.data-table td{padding:9px 12px;border-bottom:1px solid var(--b1);font-size:11px;vertical-align:top}
+.data-table td:first-child{color:var(--t2);font-weight:500;white-space:nowrap}
+.data-table tr:last-child td{border:none}
+.ok{color:var(--g)}.no{color:#f87171}.mid{color:#f5c400}
+
+/* Limiet boxes */
+.limit-box{background:var(--s1);border:1px solid var(--b1);padding:16px 18px;margin:12px 0}
+.limit-box.warn{border-left:3px solid #f5c400}
+.limit-box.good{border-left:3px solid var(--g)}
+.limit-box.bad{border-left:3px solid #f87171}
+.limit-title{font-size:10px;color:var(--t4);letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase}
+.limit-box.warn .limit-title{color:#f5c400}
+.limit-box.good .limit-title{color:var(--g)}
+.limit-box.bad  .limit-title{color:#f87171}
+.limit-text{font-size:11px;color:var(--t3);line-height:1.8}
+
+/* Infra tabel */
+.infra-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--b1);border:1px solid var(--b1);margin:16px 0}
+@media(max-width:600px){.infra-grid{grid-template-columns:1fr}}
+.infra-card{background:var(--bg);padding:16px}
+.infra-flag{font-size:16px;margin-bottom:6px}
+.infra-name{font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px}
+.infra-sub{font-size:10px;color:var(--t4);margin-bottom:8px}
+.infra-desc{font-size:11px;color:var(--t3);line-height:1.7}
+.infra-tag{display:inline-block;font-size:9px;padding:2px 6px;margin-top:6px;background:var(--gd);color:var(--g);letter-spacing:.06em}
+
+/* Rechten */
+.rights-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--b1);border:1px solid var(--b1);margin:16px 0}
+@media(max-width:600px){.rights-grid{grid-template-columns:1fr}}
+.right-card{background:var(--bg);padding:14px 16px}
+.right-title{font-size:11px;font-weight:700;color:var(--t1);margin-bottom:4px}
+.right-desc{font-size:10px;color:var(--t3);line-height:1.7}
+.right-action{font-size:9px;color:var(--g);margin-top:6px}
+
+/* Contact */
+.contact-box{background:var(--s1);border:1px solid var(--b1);padding:20px;margin-top:16px}
+
+/* Wijzigingen */
+.changelog-row{display:flex;gap:16px;padding:8px 0;border-bottom:1px solid var(--b1);font-size:11px}
+.changelog-row:last-child{border:none}
+.cl-date{color:var(--t4);flex-shrink:0;width:80px}
+.cl-text{color:var(--t3)}
+
+/* Footer */
+footer{border-top:1px solid var(--b1);padding:20px;max-width:720px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:10px;color:var(--t4)}
+.fl{font-size:13px;font-weight:800;color:var(--t1)}.fl .w{color:var(--g)}
+footer a{color:inherit;text-decoration:none}
+footer a:hover{color:var(--g)}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo"><span class="n">PARAMANT<span class="w"> WALL</span></span></a>
+  <a href="/" class="nav-back">← Terug naar Wall</a>
+  <div class="nav-ts">Versie 1.0 · 26 maart 2026</div>
+</nav>
+
+<div class="page">
+
+  <div class="doc-header">
+    <div class="doc-lbl">Juridisch · GDPR · AVG</div>
+    <h1 class="doc-title">Privacyverklaring</h1>
+    <div class="doc-version"><span style="color:var(--g)">[DOC]</span> v1.0 · 26 maart 2026 · NL/EN · Hetzner Helsinki</div>
+    <p class="doc-summary">
+      Dit is de volledige, eerlijke privacyverklaring van PARAMANT WALL. We schrijven hem niet voor advocaten — we schrijven hem zodat jij hem begrijpt. Alles staat erin: wat we opslaan, wat we nooit opslaan, en waarom. Geen kleine lettertjes.
+    </p>
+  </div>
+
+  <!-- TL;DR -->
+  <div class="tldr">
+    <div class="tldr-title">// TL;DR — de kern in 60 seconden</div>
+    <div class="tldr-row"><span class="tldr-ic">[OK]</span><span><strong>Bezoekers van jouw website:</strong> wij slaan niets over hen op. Geen IP-adressen, geen cookies, geen profielen. Zij bestaan voor ons niet.</span></div>
+    <div class="tldr-row"><span class="tldr-ic">[OK]</span><span><strong>Jij als klant:</strong> wij slaan alleen je e-mailadres + geaggregeerde statistieken (integers, geen events) op. Geen wachtwoord in plaintext. Geen betaalgegevens (Stripe doet dat).</span></div>
+    <div class="tldr-row"><span class="tldr-ic">[OK]</span><span><strong>Zero raw logging:</strong> geen enkel request wordt opgeslagen. De Wall verwerkt en vergeet. Alleen maandtotalen (geblokkeerd: 47, gestript: 842) worden bewaard.</span></div>
+    <div class="tldr-row"><span class="tldr-ic">[OK]</span><span><strong>IP-adressen:</strong> worden nooit opgeslagen. Worden on-the-fly gehasht met SHA-256 + dagelijkse wisselende salt. De hash is onomkeerbaar en niet te koppelen aan een persoon.</span></div>
+    <div class="tldr-row"><span class="tldr-ic">[OK]</span><span><strong>Publieke feed:</strong> bevat alleen tellers (integers). Geen persoonsgegevens, geen events, geen hashes van bezoekers.</span></div>
+    <div class="tldr-row"><span class="tldr-ic">[!]</span><span><strong>Cloudflare:</strong> ziet verbindingsmetadata (IP + tijdstempel) op infrastructuurniveau — buiten onze directe controle. Zie §8.</span></div>
+  </div>
+
+  <!-- 1. Wie zijn wij -->
+  <div class="section">
+    <div class="section-num">01</div>
+    <div class="section-title">Wie zijn wij</div>
+    <p>PARAMANT WALL is een product van PARAMANT, een onafhankelijk open-source project gemaakt door één persoon, gevestigd in Nederland.</p>
+    <p>Contactpersoon voor privacyvragen en AVG/GDPR-verzoeken:<br>
+    <strong>E-mail:</strong> <a href="mailto:privacy@paramant.app">privacy@paramant.app</a><br>
+    <strong>Website:</strong> <a href="https://wall.paramant.app">wall.paramant.app</a></p>
+    <p>PARAMANT WALL treedt op als <strong>verwerker</strong> (processor) voor de persoonsgegevens van de bezoekers van jouw website. Jij, als klant, bent de <strong>verwerkingsverantwoordelijke</strong> (controller). Dit is vastgelegd in onze verwerkersovereenkomst (DPA), beschikbaar op verzoek.</p>
+  </div>
+
+  <!-- 2. Welke gegevens -->
+  <div class="section">
+    <div class="section-num">02</div>
+    <div class="section-title">Welke gegevens verwerken wij</div>
+    <p>Wij maken onderscheid tussen twee categorieën: <strong>klantgegevens</strong> (jij als website-eigenaar) en <strong>bezoekersdata</strong> (bezoekers van jouw website).</p>
+
+    <p style="font-size:10px;color:var(--t4);letter-spacing:.08em;margin-bottom:4px">KLANTGEGEVENS (website-eigenaar)</p>
+    <table class="data-table">
+      <thead><tr><th>Gegeven</th><th>Waarom</th><th>Opgeslagen</th><th>Bewaartermijn</th></tr></thead>
+      <tbody>
+        <tr><td>E-mailadres</td><td>Account identificatie + key recovery</td><td class="ok">[OK] Ja</td><td>Tot verwijdering account</td></tr>
+        <tr><td>API key (hash)</td><td>Authenticatie van proxy requests</td><td class="ok">[OK] Ja</td><td>Tot verwijdering account</td></tr>
+        <tr><td>Feed hash</td><td>Publieke feed URL identificatie</td><td class="ok">[OK] Ja</td><td>Tot verwijdering account</td></tr>
+        <tr><td>Plan / subscription status</td><td>Paywall enforcement</td><td class="ok">[OK] Ja</td><td>Tot verwijdering account</td></tr>
+        <tr><td>Maandstatistieken (integers)</td><td>Usage billing + publieke feed</td><td class="mid">[~] Geaggregeerd</td><td>12 maanden</td></tr>
+        <tr><td>Wachtwoord</td><td>Niet nodig — passwordless systeem</td><td class="no">[--] Niet opgeslagen</td><td>N/A</td></tr>
+        <tr><td>Betaalgegevens</td><td>Via Stripe (buiten onze systemen)</td><td class="no">[--] Nooit bij ons</td><td>N/A</td></tr>
+        <tr><td>IP-adres klant</td><td>Rate limiting (hash, niet plaintext)</td><td class="no">[--] Alleen als hash</td><td>1 uur (Redis TTL)</td></tr>
+      </tbody>
+    </table>
+
+    <p style="font-size:10px;color:var(--t4);letter-spacing:.08em;margin-bottom:4px;margin-top:20px">BEZOEKERSDATA (bezoekers van de klantwebsite)</p>
+    <table class="data-table">
+      <thead><tr><th>Gegeven</th><th>Wat de Wall doet</th><th>Opgeslagen bij ons</th></tr></thead>
+      <tbody>
+        <tr><td>IP-adres</td><td>On-the-fly gehasht, nooit doorgestuurd</td><td class="no">[--] Nooit</td></tr>
+        <tr><td>Cookies (_ga, _fbp, etc.)</td><td>Volledig gestript uit payload</td><td class="no">[--] Nooit</td></tr>
+        <tr><td>user_id / client_id</td><td>Geblokkeerd of gehasht</td><td class="no">[--] Nooit</td></tr>
+        <tr><td>Browserfingerprint</td><td>Niet verzameld</td><td class="no">[--] Nooit</td></tr>
+        <tr><td>Paginabezoeken</td><td>Event-type telt mee in aggregaat</td><td class="no">[--] Nooit per persoon</td></tr>
+        <tr><td>Request payload</td><td>Verwerkt en onmiddellijk weggegooid</td><td class="no">[--] Nooit</td></tr>
+        <tr><td>Locatiedata</td><td>Niet verzameld</td><td class="no">[--] Nooit</td></tr>
+      </tbody>
+    </table>
+
+    <div class="limit-box good" style="margin-top:16px">
+      <div class="limit-title">[OK] Wat de publieke feed WEL bevat</div>
+      <div class="limit-text">Alleen integers per maand: "842 cookies gestript", "47 trackers geblokkeerd". Geen tijdstempels per event. Geen hashes. Geen informatie die terugkoppelt naar een bezoeker of klant.</div>
+    </div>
+  </div>
+
+  <!-- 3. Hoe anonimiseren we -->
+  <div class="section">
+    <div class="section-num">03</div>
+    <div class="section-title">Hoe werkt de anonimisering</div>
+    <p>Dit is de technische kern van GDPR-compliance by design. Elk inkomend request doorloopt drie stappen:</p>
+
+    <div class="limit-box good">
+      <div class="limit-title">STAP 1 — IP-adres anonimisering</div>
+      <div class="limit-text">
+        Het IP-adres van de bezoeker (bijv. <code style="color:var(--g)">85.204.112.47</code>) wordt direct gehasht:<br><br>
+        <code style="color:var(--g)">sha256("85.204.112.47" + "2026-03-26" + GEHEIME_SALT)</code><br>
+        → <code style="color:var(--g)">a3f8c2d1e7b4f91c</code><br><br>
+        De hash is <strong>dagelijks wisselend</strong> (andere salt elke dag). Het IP-adres is onomkeerbaar. Twee verschillende bezoekers op dezelfde dag met hetzelfde IP: één hash — gewenst voor sessie-analytics. Morgen: volledig andere hash. Geen enkel persistent profiel.
+      </div>
+    </div>
+
+    <div class="limit-box good">
+      <div class="limit-title">STAP 2 — Cookie & PII stripping</div>
+      <div class="limit-text">
+        Alle bekende tracking-cookies (<code style="color:var(--g)">_ga</code>, <code style="color:var(--g)">_fbp</code>, <code style="color:var(--g)">_fbc</code>, <code style="color:var(--g)">IDE</code>, etc.) en persoonlijke identifiers (<code style="color:var(--g)">client_id</code>, <code style="color:var(--g)">user_id</code>, <code style="color:var(--g)">email</code>) worden vervangen door <code style="color:var(--g)">[stripped]</code> of volledig verwijderd uit de payload. Ze bereiken Google/Meta nooit.
+      </div>
+    </div>
+
+    <div class="limit-box good">
+      <div class="limit-title">STAP 3 — Aggregatie (geen raw events)</div>
+      <div class="limit-text">
+        Na verwerking wordt alleen een integer-teller verhoogd in de database:<br>
+        <code style="color:var(--g)">UPDATE usage_monthly SET stripped = stripped + 1</code><br><br>
+        Het request zelf wordt niet opgeslagen. Geen tijdstempel per event. Geen URL. Geen payload. Alleen een getal dat één hoger wordt.
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Grondslagen -->
+  <div class="section">
+    <div class="section-num">04</div>
+    <div class="section-title">Juridische grondslagen (AVG Art. 6)</div>
+    <table class="data-table">
+      <thead><tr><th>Verwerking</th><th>Grondslag</th><th>AVG artikel</th></tr></thead>
+      <tbody>
+        <tr><td>E-mailadres klant</td><td>Uitvoering overeenkomst</td><td class="ok">Art. 6(1)(b)</td></tr>
+        <tr><td>API key, feed hash</td><td>Uitvoering overeenkomst</td><td class="ok">Art. 6(1)(b)</td></tr>
+        <tr><td>Maandstatistieken</td><td>Gerechtvaardigd belang (facturering)</td><td class="ok">Art. 6(1)(f)</td></tr>
+        <tr><td>Proxy verwerking bezoekers</td><td>Gerechtvaardigd belang klant + Privacy by Design</td><td class="ok">Art. 6(1)(f) + Art. 25</td></tr>
+        <tr><td>GDPR audit log</td><td>Wettelijke verplichting</td><td class="ok">Art. 6(1)(c)</td></tr>
+        <tr><td>Stripe betalingen</td><td>Uitvoering overeenkomst</td><td class="ok">Art. 6(1)(b)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 5. Passwordless -->
+  <div class="section">
+    <div class="section-num">05</div>
+    <div class="section-title">Geen wachtwoorden — passwordless by design</div>
+    <p>PARAMANT WALL gebruikt <strong>geen wachtwoorden</strong>. De API key is je identiteit. Dit is een bewuste privacykeuze:</p>
+    <div class="limit-box good">
+      <div class="limit-title">[OK] Hoe het werkt</div>
+      <div class="limit-text">
+        Bij registratie ontvang je per e-mail een unieke API key (<code style="color:var(--g)">wk_abc123...</code>). Deze key is 192 bits cryptographically secure random — niet te raden. De key ís je toegang. Sla hem op.<br><br>
+        Ben je je key kwijt? Vraag een <strong>key recovery link</strong> aan via <a href="/recover">wall.paramant.app/recover</a>. We sturen een eenmalige magic link naar je geregistreerde e-mailadres. De link vervalt na 15 minuten en kan één keer gebruikt worden.
+      </div>
+    </div>
+    <div class="limit-box warn">
+      <div class="limit-title">[!] Geen wachtwoord = geen inlog-hack risico</div>
+      <div class="limit-text">Er is geen wachtwoorddatabase die gehackt kan worden. We slaan geen wachtwoord-hashes op. Een datalek bij ons onthult nooit een wachtwoord dat je ook elders gebruikt.</div>
+    </div>
+  </div>
+
+  <!-- 6. Derde partijen -->
+  <div class="section">
+    <div class="section-num">06</div>
+    <div class="section-title">Derde partijen</div>
+    <table class="data-table">
+      <thead><tr><th>Partij</th><th>Doel</th><th>Wat zij zien</th><th>Locatie</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Hetzner</strong></td><td>Server hosting</td><td>Versleuteld verkeer, schijfopslag</td><td class="ok">🇩🇪 Helsinki/Neurenberg, EU</td></tr>
+        <tr><td><strong>Cloudflare</strong></td><td>DDoS, SSL, CDN</td><td>IP + tijdstempel (infrastructuur)</td><td class="mid">VS/EU (zie §8)</td></tr>
+        <tr><td><strong>Stripe</strong></td><td>Betalingen</td><td>Betaalgegevens, e-mail voor factuur</td><td class="mid">VS (SCCs)</td></tr>
+        <tr><td><strong>Google/Meta</strong></td><td>Upstream analytics (klant keuze)</td><td>Geanonimiseerde events (geen PII)</td><td class="mid">VS (na stripping)</td></tr>
+      </tbody>
+    </table>
+
+    <div class="limit-box warn">
+      <div class="limit-title">[!] Geen andere derde partijen</div>
+      <div class="limit-text">Wij gebruiken geen analytics, geen tracking pixels, geen A/B testing tools, geen advertentienetwerken op onze eigen website. Wij "eten ons eigen eten".</div>
+    </div>
+  </div>
+
+  <!-- 7. Infrastructuur -->
+  <div class="section">
+    <div class="section-num">07</div>
+    <div class="section-title">Infrastructuur — Europees en controleerbaar</div>
+    <div class="infra-grid">
+      <div class="infra-card">
+        <div class="infra-flag">🇩🇪</div>
+        <div class="infra-name">Hetzner — Helsinki</div>
+        <div class="infra-sub">Primaire server · wall-server.js</div>
+        <div class="infra-desc">De Wall-server draait op een dedicated VPS in Helsinki (Finland). Hetzner valt onder EU/EEA jurisdictie. Geen Amerikaanse wetgeving (FISA, NSL) van toepassing.</div>
+        <span class="infra-tag">EU · GDPR · eigendom</span>
+      </div>
+      <div class="infra-card">
+        <div class="infra-flag">☁️</div>
+        <div class="infra-name">Cloudflare</div>
+        <div class="infra-sub">CDN · DDoS · SSL-terminatie</div>
+        <div class="infra-desc">Cloudflare termineert TLS en ziet verbindingsmetadata (IP, tijdstempel) op infrastructuurniveau. Cloudflare ziet nooit de inhoud van proxy requests of API payloads — deze zijn versleuteld via TLS.</div>
+        <span class="infra-tag">TLS 1.3 · DDoS</span>
+      </div>
+      <div class="infra-card">
+        <div class="infra-flag">🔒</div>
+        <div class="infra-name">PostgreSQL (Docker)</div>
+        <div class="infra-sub">Database · 127.0.0.1:5432</div>
+        <div class="infra-desc">Postgres draait in een Docker container, alleen bereikbaar van localhost. TLS + client certificate authenticatie (verify-full). Data opgeslagen op de Hetzner VPS.</div>
+        <span class="infra-tag">TLS verify-full · loopback only</span>
+      </div>
+      <div class="infra-card">
+        <div class="infra-flag">⚡</div>
+        <div class="infra-name">Redis</div>
+        <div class="infra-sub">Cache · rate limits · loopback</div>
+        <div class="infra-desc">Redis slaat alleen rate-limit tellers (gehashte IP's) en gecachede customer-data op. TTL van 60-3600 seconden. Geen PII. Alleen bereikbaar van localhost.</div>
+        <span class="infra-tag">In-memory · TTL · loopback</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. Eerlijk over beperkingen -->
+  <div class="section">
+    <div class="section-num">08</div>
+    <div class="section-title">Eerlijk over de beperkingen</div>
+    <p>Volledige transparantie vereist dat we ook schrijven wat we <em>niet</em> kunnen garanderen:</p>
+
+    <div class="limit-box warn">
+      <div class="limit-title">[!] Cloudflare ziet verbindingsmetadata</div>
+      <div class="limit-text">Cloudflare logt IP-adressen en tijdstempels van verbindingen op infrastructuurniveau. Dit is buiten onze directe controle. Cloudflare heeft een Privacy Shield / SCCs-arrangement. Voor maximale anonimiteit: gebruik de Wall via Tor.</div>
+    </div>
+
+    <div class="limit-box warn">
+      <div class="limit-title">[!] Stripe verwerkt betaalgegevens in de VS</div>
+      <div class="limit-text">Stripe Inc. is een Amerikaans bedrijf. Betaalgegevens worden verwerkt onder Standard Contractual Clauses (SCCs). Stripe heeft een eigen privacybeleid. Wij sturen Stripe alleen je e-mailadres en plan (voor de factuur).</div>
+    </div>
+
+    <div class="limit-box warn">
+      <div class="limit-title">[!] Jij blijft verwerkingsverantwoordelijke</div>
+      <div class="limit-text">PARAMANT WALL is een technisch hulpmiddel. GDPR-compliance is breder dan alleen tracking. Jij blijft verantwoordelijk voor je cookiebeleid, verwerkersovereenkomsten met andere partijen, en het informeren van je bezoekers.</div>
+    </div>
+
+    <div class="limit-box warn">
+      <div class="limit-title">[!] Geen formele GDPR-audit</div>
+      <div class="limit-text">Dit systeem is gebouwd met GDPR by Design als kernprincipe, maar is niet formeel geaudit door een gecertificeerde privacyadvocaat. Gebruik dit als fundament — geen vervanging voor eigen juridisch advies bij twijfel.</div>
+    </div>
+  </div>
+
+  <!-- 9. Rechten -->
+  <div class="section">
+    <div class="section-num">09</div>
+    <div class="section-title">Jouw rechten (AVG Art. 12-22)</div>
+    <div class="rights-grid">
+      <div class="right-card">
+        <div class="right-title">Recht op inzage (Art. 15)</div>
+        <div class="right-desc">Vraag op welke gegevens we van je hebben. We sturen je een export binnen 30 dagen.</div>
+        <div class="right-action">→ privacy@paramant.app</div>
+      </div>
+      <div class="right-card">
+        <div class="right-title">Recht op verwijdering (Art. 17)</div>
+        <div class="right-desc">Verzoek je account en alle gegevens te verwijderen. CASCADE delete verwijdert alles. Audit hash blijft (geen PII).</div>
+        <div class="right-action">→ curl -X POST https://wall.paramant.app/api/gdpr/delete -H "Content-Type: application/json" -d "{\"email\":\"jouw@email.nl\"}" </div>
+      </div>
+      <div class="right-card">
+        <div class="right-title">Recht op correctie (Art. 16)</div>
+        <div class="right-desc">Onjuist e-mailadres? Stuur een verzoek, we passen het aan.</div>
+        <div class="right-action">→ privacy@paramant.app</div>
+      </div>
+      <div class="right-card">
+        <div class="right-title">Recht op portabiliteit (Art. 20)</div>
+        <div class="right-desc">Vraag je gegevens op in JSON-formaat. Account + statistieken.</div>
+        <div class="right-action">→ privacy@paramant.app</div>
+      </div>
+      <div class="right-card">
+        <div class="right-title">Recht van bezwaar (Art. 21)</div>
+        <div class="right-desc">Bezwaar tegen verwerking op basis van gerechtvaardigd belang.</div>
+        <div class="right-action">→ privacy@paramant.app</div>
+      </div>
+      <div class="right-card">
+        <div class="right-title">Klacht indienen</div>
+        <div class="right-desc">Klacht over privacyverwerking? Nederlandse toezichthouder: Autoriteit Persoonsgegevens.</div>
+        <div class="right-action">→ autoriteitpersoonsgegevens.nl</div>
+      </div>
+    </div>
+    <p style="margin-top:16px">We reageren op alle verzoeken binnen <strong>30 dagen</strong>. Bij complexe verzoeken maximaal 90 dagen (met kennisgeving).</p>
+  </div>
+
+  <!-- 10. Cookies -->
+  <div class="section">
+    <div class="section-num">10</div>
+    <div class="section-title">Cookies op wall.paramant.app</div>
+    <p>Ironisch genoeg gebruiken wij <strong>geen tracking cookies</strong> op onze eigen website. We zijn een privacy-proxy — we zouden onszelf tegenspreken als we dat wel deden.</p>
+    <table class="data-table">
+      <thead><tr><th>Cookie</th><th>Type</th><th>Doel</th><th>TTL</th></tr></thead>
+      <tbody>
+        <tr><td>Geen analytics cookies</td><td class="ok">N/A</td><td>Wij gebruiken GA4 niet op onze eigen site</td><td>N/A</td></tr>
+        <tr><td>Geen social media cookies</td><td class="ok">N/A</td><td>Geen Facebook/Twitter/LinkedIn tracking</td><td>N/A</td></tr>
+        <tr><td><code>wall_token</code> (localStorage)</td><td class="mid">Functioneel</td><td>Sessie herkenning na registratie (optioneel)</td><td>Browser sessie</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:12px">Er is <strong>geen cookiebanner</strong> nodig op onze website — er zijn geen niet-functionele cookies. Ironie ten top.</p>
+  </div>
+
+  <!-- 11. Bewaartermijnen -->
+  <div class="section">
+    <div class="section-num">11</div>
+    <div class="section-title">Bewaartermijnen</div>
+    <table class="data-table">
+      <thead><tr><th>Gegeven</th><th>Bewaartermijn</th><th>Reden</th></tr></thead>
+      <tbody>
+        <tr><td>E-mailadres + API key</td><td>Tot verwijdering account</td><td>Uitvoering overeenkomst</td></tr>
+        <tr><td>Maandstatistieken</td><td>12 maanden</td><td>Facturering + trend analyse</td></tr>
+        <tr><td>Magic links</td><td>15 minuten (of na gebruik)</td><td>Veiligheid — éénmalig gebruik</td></tr>
+        <tr><td>Rate limit Redis keys</td><td>1 uur - 24 uur</td><td>DDoS bescherming</td></tr>
+        <tr><td>GDPR audit hash</td><td>5 jaar</td><td>Wettelijke verplichting aantoonbaarheid</td></tr>
+        <tr><td>IP-adres hashes (Redis)</td><td>1 uur</td><td>Rate limiting — geen persistent opslag</td></tr>
+        <tr><td>Raw request payloads</td><td class="ok">0 seconden — nooit opgeslagen</td><td>Privacy by Design</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 12. Beveiliging -->
+  <div class="section">
+    <div class="section-num">12</div>
+    <div class="section-title">Technische beveiliging</div>
+    <p>Een samenvatting van de beveiligingsmaatregelen (volledig beschreven in onze technische documentatie):</p>
+    <div class="limit-box good">
+      <div class="limit-title">[OK] Transport</div>
+      <div class="limit-text">TLS 1.3 extern (Cloudflare). mTLS intern (Nginx → Node.js, mutual authentication). TLS verify-full intern (Node.js → PostgreSQL). Nginx access_log off — geen request logging op disk.</div>
+    </div>
+    <div class="limit-box good">
+      <div class="limit-title">[OK] Applicatie</div>
+      <div class="limit-text">Passwordless systeem (geen wachtwoorddatabase). Parameterized SQL queries (SQL injection onmogelijk). Rate limiting op alle endpoints. Domain locking (API key werkt alleen voor geregistreerde domeinen). Fail-fast op ontbrekende env vars.</div>
+    </div>
+    <div class="limit-box good">
+      <div class="limit-title">[OK] GDPR by Design (Art. 25)</div>
+      <div class="limit-text">Data minimalisatie: alleen wat strikt noodzakelijk is. Aggregatie by default: nooit raw events opslaan. Dagelijkse IP-salting: geen persistent profiling. Zero raw logging: verwerk en vergeet.</div>
+    </div>
+  </div>
+
+  <!-- 13. Wijzigingen -->
+  <div class="section">
+    <div class="section-num">13</div>
+    <div class="section-title">Wijzigingen in dit beleid</div>
+    <p>Bij materiële wijzigingen informeren wij klanten per e-mail minimaal 14 dagen van tevoren. De datum van de laatste wijziging staat altijd bovenaan dit document. Wijzigingshistorie:</p>
+    <div style="margin-top:12px">
+      <div class="changelog-row"><span class="cl-date">2026-03-26</span><span class="cl-text">v1.0 — Eerste publicatie. Passwordless systeem beschreven.</span></div>
+    </div>
+  </div>
+
+  <!-- 14. Contact -->
+  <div class="section">
+    <div class="section-num">14</div>
+    <div class="section-title">Contact voor privacyvragen</div>
+    <div class="contact-box">
+      <div style="font-size:9px;color:var(--t4);letter-spacing:.1em;margin-bottom:12px">VERWERKINGSVERANTWOORDELIJKE</div>
+      <div style="font-size:12px;color:var(--t2);line-height:2">
+        PARAMANT<br>
+        Open-source project · Nederland<br>
+        <strong>Privacy e-mail:</strong> <a href="mailto:privacy@paramant.app" style="color:var(--g)">privacy@paramant.app</a><br>
+        <strong>GDPR verwijdering:</strong> <a href="/api/gdpr/delete" style="color:var(--g)">curl -X POST https://wall.paramant.app/api/gdpr/delete -H "Content-Type: application/json" -d "{\"email\":\"jouw@email.nl\"}" </a><br>
+        <strong>AP (toezichthouder):</strong> <a href="https://autoriteitpersoonsgegevens.nl" target="_blank" rel="noopener" style="color:var(--g)">autoriteitpersoonsgegevens.nl</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="fl">PARAMANT<span class="w"> WALL</span></div>
+  <div style="display:flex;gap:20px;flex-wrap:wrap">
+    <a href="/">Wall</a>
+    <a href="https://paramant.app/">Paramant Chat</a>
+    <a href="https://github.com/Apolloccrypt" target="_blank" rel="noopener">GitHub</a>
+    <a href="/health">Status</a>
+  </div>
+  <div>© 2026 PARAMANT · Hetzner Helsinki · Zero logging</div>
+</footer>
+
+</body>
+</html>

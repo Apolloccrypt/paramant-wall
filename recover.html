@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PARAMANT WALL — Key Recovery</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0c0e10;--s1:#111214;--b1:#1e2026;--b2:#2a2d35;--t1:#e2e4e8;--t2:#c8ccd4;--t3:#8a8e98;--t4:#5a6070;--g:#00ff9d;--gd:rgba(0,255,157,.06);--gb:rgba(0,255,157,.18);--mono:ui-monospace,'Cascadia Code','Fira Code','Consolas',monospace;}
+body{background:var(--bg);color:var(--t2);font-family:var(--mono);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;-webkit-font-smoothing:antialiased}
+.card{background:var(--s1);border:1px solid var(--b1);max-width:420px;width:100%}
+.card-hd{padding:16px 20px 12px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:13px;font-weight:800;color:var(--t1)}.logo .w{color:var(--g)}
+.card-body{padding:20px}
+.lbl{font-size:9px;color:var(--t4);letter-spacing:.1em;margin-bottom:6px;text-transform:uppercase}
+.title{font-size:18px;font-weight:800;color:var(--t1);margin-bottom:8px}
+.sub{font-size:11px;color:var(--t3);line-height:1.7;margin-bottom:20px}
+input{display:block;width:100%;padding:11px 12px;background:var(--bg);border:1px solid var(--b2);color:var(--t1);font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s;margin-bottom:10px}
+input:focus{border-color:var(--g)}
+input::placeholder{color:var(--t4)}
+.btn{display:block;width:100%;padding:12px;background:var(--g);color:var(--bg);font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.08em;border:none;cursor:pointer;transition:background .15s}
+.btn:hover:not(:disabled){background:#00cc7a}.btn:disabled{opacity:.4;cursor:not-allowed}
+.err{display:none;padding:8px 10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#f87171;font-size:10px;margin-bottom:10px}
+.ok-box{display:none;padding:12px 14px;background:var(--gd);border:1px solid var(--gb);font-size:11px;color:var(--g);line-height:1.8;margin-bottom:10px}
+.hint{font-size:9px;color:var(--t4);text-align:center;margin-top:8px;line-height:1.6}
+.hint a{color:var(--t4);text-decoration:none}.hint a:hover{color:var(--g)}
+
+/* Success state na magic link */
+.key-box{background:var(--bg);border:1px solid rgba(0,255,157,.2);padding:11px 12px;font-size:11px;color:var(--g);word-break:break-all;line-height:1.6;margin-bottom:6px}
+.copy-btn{display:block;width:100%;padding:8px;background:#1a1d22;border:1px solid var(--b2);color:var(--t3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;margin-bottom:8px;letter-spacing:.04em}
+.copy-btn:hover{border-color:var(--g);color:var(--g)}
+.warn{font-size:9px;color:#f87171;padding:5px 8px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="card-hd">
+    <div class="logo">PARAMANT <span class="w">WALL</span></div>
+    <a href="/" style="font-size:10px;color:var(--t4);text-decoration:none">← Terug</a>
+  </div>
+  <div class="card-body" id="card-body">
+    <!-- ingevuld door JS op basis van URL -->
+  </div>
+</div>
+
+<script>
+var BASE = 'https://wall.paramant.app';
+var token = (location.pathname.match(/\/recover\/([a-f0-9]{64})/) || [])[1] || '';
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function copy(id, btn) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var orig = btn.textContent;
+  try { navigator.clipboard.writeText(el.textContent.trim()); } catch(e) {}
+  btn.textContent = '[OK] Gekopieerd!';
+  setTimeout(function() { btn.textContent = orig; }, 2000);
+}
+
+var body = document.getElementById('card-body');
+
+if (token) {
+  // Er is een token in de URL — verwerk magic link
+  body.innerHTML = '<div class="lbl">Key Recovery</div><div class="title">Gegevens laden…</div><div class="sub" id="sub">Even geduld…</div><div id="result"></div>';
+
+  fetch(BASE + '/api/recover/' + token)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var sub = document.getElementById('sub');
+      var result = document.getElementById('result');
+      if (!d.ok) {
+        sub.textContent = '';
+        result.innerHTML = '<div class="err" style="display:block">[!] ' + esc(d.msg || 'Link verlopen of al gebruikt.') + '<br><a href="/recover" style="color:#f87171">Vraag een nieuwe link aan →</a></div>';
+        return;
+      }
+      document.querySelector('.title').textContent = 'Jouw gegevens gevonden.';
+      sub.textContent = 'Bewaar je API key veilig. Dit scherm verdwijnt als je de pagina verlaat.';
+
+      result.innerHTML =
+        '<div class="lbl" style="margin-top:16px">API KEY</div>'
+        + '<div class="key-box" id="r-key">' + esc(d.api_key) + '</div>'
+        + '<button class="copy-btn" onclick="copy(\'r-key\', this)">[COPY] Kopieer API key</button>'
+        + '<div class="warn">[!] Nooit delen. Behandel als wachtwoord.</div>'
+        + '<div class="lbl">PUBLIEKE FEED</div>'
+        + '<div class="key-box" id="r-feed">' + esc(d.feed_url) + '</div>'
+        + '<button class="copy-btn" onclick="copy(\'r-feed\', this)">[COPY] Kopieer feed URL</button>'
+        + '<div class="lbl" style="margin-top:12px">SNIPPET IN &lt;HEAD&gt;</div>'
+        + '<div class="key-box" id="r-snip" style="font-size:10px">' + esc(d.snippet) + '</div>'
+        + '<button class="copy-btn" onclick="copy(\'r-snip\', this)">[COPY] Kopieer snippet</button>'
+        + '<a href="' + esc(d.feed_url) + '" target="_blank" style="display:block;margin-top:8px;padding:10px;background:var(--g);color:var(--bg);font-family:var(--mono);font-size:10px;font-weight:800;text-align:center;text-decoration:none">>> Bekijk live feed</a>';
+    })
+    .catch(function() {
+      document.querySelector('.title').textContent = 'Fout opgetreden';
+      document.getElementById('sub').textContent = 'Probeer opnieuw of vraag een nieuwe recovery link aan.';
+    });
+
+} else {
+  // Geen token — toon het recovery formulier
+  body.innerHTML =
+    '<div class="lbl">API Key vergeten?</div>'
+    + '<div class="title">Key recovery</div>'
+    + '<div class="sub">Vul je geregistreerde e-mailadres in. Als het bij ons bekend is, ontvang je binnen enkele minuten een eenmalige link (geldig 15 minuten).</div>'
+    + '<div class="err" id="err"></div>'
+    + '<div class="ok-box" id="ok-box"></div>'
+    + '<input type="email" id="email-input" placeholder="jij@bedrijf.nl" autocomplete="email">'
+    + '<button class="btn" id="submit-btn" onclick="submitRecovery()">>> STUUR RECOVERY LINK</button>'
+    + '<div class="hint">De API key IS je toegang — geen wachtwoord nodig.<br>Nieuwe gebruiker? <a href="/">Maak een account aan →</a></div>';
+}
+
+async function submitRecovery() {
+  var email = (document.getElementById('email-input') || {}).value || '';
+  var err   = document.getElementById('err');
+  var ok    = document.getElementById('ok-box');
+  var btn   = document.getElementById('submit-btn');
+
+  err.style.display = 'none';
+  ok.style.display  = 'none';
+
+  if (!email || email.indexOf('@') < 1) {
+    err.textContent = '[!] Vul een geldig e-mailadres in.';
+    err.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '>> Versturen…';
+
+  try {
+    var r = await fetch(BASE + '/api/recover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
+    var d = await r.json();
+
+    // Altijd positieve response (privacy — niet laten zien of email bestaat)
+    ok.textContent  = '[OK] ' + (d.msg || 'Als dit e-mailadres bij ons bekend is, ontvang je een link binnen enkele minuten. Controleer ook je spam.');
+    ok.style.display = 'block';
+    btn.textContent  = '>> Verstuurd';
+  } catch(e) {
+    err.textContent  = '[!] Netwerkfout. Probeer opnieuw.';
+    err.style.display = 'block';
+    btn.disabled      = false;
+    btn.textContent   = '>> STUUR RECOVERY LINK';
+  }
+}
+
+// Enter key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && document.getElementById('email-input')) submitRecovery();
+});
+</script>
+
+</body>
+</html>
