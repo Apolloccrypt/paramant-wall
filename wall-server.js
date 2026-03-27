@@ -455,8 +455,8 @@ app.post('/api/auth/register', async function(req, res) {
         plan:            plan,
         domain:          domain.slice(0, 500),
         template:        template,
-        tracker_config:  JSON.stringify(body.trackerConfig  || {}).slice(0, 3000),
-        custom_trackers: JSON.stringify(body.customTrackers || []).slice(0, 1000),
+        tracker_config:  JSON.stringify(body.trackerConfig  || {}).slice(0, 490),
+        custom_trackers: JSON.stringify(body.customTrackers || []).slice(0, 490),
       },
       subscription_data: {
         metadata: { email, plan, domain: domain.slice(0, 500), template }
