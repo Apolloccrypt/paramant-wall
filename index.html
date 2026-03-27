@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PARAMANT WALL — Privacy Proxy voor Analytics</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230c0e10'/><text y='24' font-size='22' fill='%2300ff9d'>W</text></svg>">
-<meta name="description" content="Houd analytics. Gooi cookies weg. PARAMANT WALL proxyt tracking requests en stripped alle PII voordat het Google bereikt.">
+<meta name="description" content="PARAMANT WALL — privacy interceptor voor analytics. Alle tracking requests gestript, IP geanonimiseerd, PII geblokkeerd. Jij houdt analytics. Bezoekers houden privacy. Geen cookie banner nodig.">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -168,7 +168,7 @@ footer{border-top:1px solid var(--b1);padding:24px;max-width:1100px;margin:0 aut
 <nav>
   <a href="/" class="nav-logo">
     <span class="n">PARAMANT<span class="w"> WALL</span></span>
-    <span class="v">v3.1.0</span>
+    <span class="v">v3.4.0</span>
   </a>
   <div class="nav-links">
     <a href="#demo">DEMO</a><a href="#features">FEATURES</a>
@@ -183,9 +183,12 @@ footer{border-top:1px solid var(--b1);padding:24px;max-width:1100px;margin:0 aut
 <!-- HERO -->
 <div class="hero">
   <div>
-    <div class="hero-badge"><span class="blink"></span>LIVE · wall.paramant.app · v3.1.0</div>
+    <div class="hero-badge"><span class="blink"></span>LIVE · wall.paramant.app · v3.4.0</div>
     <h1>Analytics ja.<br><em>Privacy ook.</em></h1>
-    <p class="hero-sub">Een privacy proxy voor jouw website. Alle tracking requests lopen via PARAMANT WALL — cookies gestript, IP geanonimiseerd, PII geblokkeerd. Jij houdt analytics. Jouw bezoekers houden hun privacy. Bedrijven betalen. Bezoekers nooit.</p>
+    <p <p class="hero-sub">Een privacy interceptor voor jouw website.<br><br>
+Alle tracking requests (GA4, Meta, TikTok, Hotjar…) worden door PARAMANT WALL afgevangen.
+Cookies gestript, IP-adressen dagelijks geanonimiseerd, PII geblokkeerd.
+Jij houdt bruikbare analytics. Jouw bezoekers houden hun privacy.</p>
     <div class="hero-btns">
       <a href="#" class="btn btn-g" onclick="event.preventDefault();openModal('starter')" onclick="event.preventDefault();openModal('starter')">>> ACCOUNT AANMAKENMAKEN</a>
       <a href="#hoe" class="btn btn-ghost">Hoe werkt het? v</a>
@@ -202,28 +205,62 @@ footer{border-top:1px solid var(--b1);padding:24px;max-width:1100px;margin:0 aut
     <div class="pvis-hd">
       <div class="pdot" style="background:#ef4444"></div>
       <div class="pdot" style="background:#f5c400;margin-left:4px"></div>
-      <div class="pdot" style="background:var(--g);margin-left:4px"></div>
-      <span class="pvis-title">// WALL INTERCEPTIE</span>
-      <span class="pvis-live">ACTIEF</span>
-    </div>
-    <div class="pvis-body">
-      <div style="font-size:10px;color:var(--t4);margin-bottom:8px;letter-spacing:.06em">INKOMEND → JOUW SITE</div>
-      <div class="pr block"><span>⛔</span><span class="lbl">Cookie: _ga=GA1.2.1234567</span><span class="badge r">GESTRIPT</span></div>
-      <div class="pr block"><span>⛔</span><span class="lbl">IP: 85.204.112.47</span><span class="badge r">GESTRIPT</span></div>
-      <div class="pr block"><span>⛔</span><span class="lbl">User-Agent: Mozilla/5.0 Win...</span><span class="badge r">GESTRIPT</span></div>
-      <div class="pr block"><span>⛔</span><span class="lbl">Hotjar · Meta Pixel · Segment</span><span class="badge r">GEBLOKKEERD</span></div>
-      <div class="pdivider">↓ WALL verwerkt ↓</div>
-      <div class="pr anon"><span>~</span><span class="lbl">client_id → sha256 + dagelijkse salt</span><span class="badge y">GEANON.</span></div>
-      <div class="pr anon"><span>~</span><span class="lbl">IP → hash (dag, niet persistent)</span><span class="badge y">GEANON.</span></div>
-      <div class="pdivider">↓ schoon naar Google ↓</div>
-      <div class="pr allow"><span>[OK]</span><span class="lbl">event: page_view</span><span class="badge g">DOORGELATEN</span></div>
-      <div class="pr allow"><span>[OK]</span><span class="lbl">session_duration, scroll_depth</span><span class="badge g">DOORGELATEN</span></div>
-      <div class="pdest">
-        <span class="pdest-lbl">UPSTREAM:</span>
-        <span class="pdest-val">google-analytics.com</span>
-        <span class="pdest-tag">SCHOON</span>
-      </div>
-    </div>
+      <div class="demo-box" style="background:var(--s1);border:1px solid var(--b1);overflow:hidden">
+          <div style="padding:10px 14px;border-bottom:1px solid var(--b1);font-size:9px;color:var(--t4);letter-spacing:.1em;display:flex;align-items:center;gap:8px">
+            <span style="width:6px;height:6px;background:var(--g);border-radius:50%;display:inline-block;animation:blink 1.5s infinite"></span>
+            // WALL INTERCEPTIE ACTIEF — zo werkt het écht
+          </div>
+          <div style="padding:14px;font-size:10px;line-height:2">
+            <div style="color:var(--t4);margin-bottom:8px;letter-spacing:.06em">INKOMEND REQUEST VAN BEZOEKER &darr;</div>
+
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b1)">
+              <span>&#x26D4; Cookie: <code style="color:#f87171">_ga=GA1.2.1234567890</code></span>
+              <span style="color:#f87171;font-size:9px">VOLLEDIG VERWIJDERD</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b1)">
+              <span>&#x26D4; IP: <code style="color:#f87171">85.204.112.47</code></span>
+              <span style="color:#f87171;font-size:9px">SHA-256 HASH (dagelijks)</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b1)">
+              <span>&#x26D4; User-Agent fingerprint</span>
+              <span style="color:#f87171;font-size:9px">GESTRIPT</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b1)">
+              <span>&#x26D4; Hotjar &middot; Meta Pixel &middot; TikTok</span>
+              <span style="color:#f87171;font-size:9px">GEBLOKKEERD</span>
+            </div>
+
+            <div style="color:var(--t4);margin:10px 0 8px;letter-spacing:.06em">&darr; WALL VERWERKT LOKAAL &darr;</div>
+
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b1)">
+              <span style="color:#f5c400">~ client_id &rarr; <code>SHA-256(id+dag+salt)</code></span>
+              <span style="color:#f5c400;font-size:9px">GEANON.</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b1)">
+              <span style="color:#f5c400">~ IP &rarr; <code>a3f8c2d1...</code> (16 chars, dag-hash)</span>
+              <span style="color:#f5c400;font-size:9px">GEANON.</span>
+            </div>
+
+            <div style="color:var(--t4);margin:10px 0 8px;letter-spacing:.06em">&darr; ALLEEN SCHONE DATA NAAR GOOGLE &darr;</div>
+
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b1)">
+              <span style="color:var(--g)">[OK] event: <code>page_view</code></span>
+              <span style="color:var(--g);font-size:9px">DOORGELATEN</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0">
+              <span style="color:var(--g)">[OK] <code>session_duration, scroll_depth</code></span>
+              <span style="color:var(--g);font-size:9px">DOORGELATEN</span>
+            </div>
+
+            <div style="margin-top:12px;padding:8px;background:rgba(0,255,157,.04);border:1px solid rgba(0,255,157,.12);font-size:9px;color:var(--t4)">
+              Geen ruwe IP's. Geen cookies. Geen PII. Alleen de data die jij expliciet toestaat.
+            </div>
+          </div>
+          <div style="padding:8px 14px;border-top:1px solid var(--b1);font-size:8px;color:var(--t4);display:flex;justify-content:space-between">
+            <span>UPSTREAM: google-analytics.com</span>
+            <span style="color:var(--g)">SCHOON &#x2713;</span>
+          </div>
+        </div>
   </div>
 </div>
 
@@ -403,7 +440,54 @@ footer{border-top:1px solid var(--b1);padding:24px;max-width:1100px;margin:0 aut
 <hr>
 
 <!-- FEATURES -->
-<div class="sec" id="features">
+<div class="sec" 
+      <!-- Technisch Transparant sectie -->
+      <section id="transparant" style="padding:64px 24px;background:var(--s1);border-top:1px solid var(--b1)">
+        <div style="max-width:900px;margin:0 auto">
+          <div style="font-size:9px;color:var(--t4);letter-spacing:.12em;margin-bottom:8px">// TECHNISCH TRANSPARANT</div>
+          <h2 style="font-size:clamp(18px,3vw,28px);font-weight:800;color:var(--t1);margin-bottom:32px">Antwoorden op de vragen die je gaat stellen.</h2>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+            <div style="padding:20px;border:1px solid var(--b1);background:var(--bg)">
+              <div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:8px">IP-ADRESSEN</div>
+              <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:8px">Nooit opgeslagen.</div>
+              <div style="font-size:10px;color:var(--t3);line-height:1.8">IP's worden direct vervangen door <code style="color:var(--g)">SHA-256(ip + dag + salt)</code>. Elke dag een andere hash. Geen persistent tracking. Geen koppeling naar persoon mogelijk.</div>
+            </div>
+
+            <div style="padding:20px;border:1px solid var(--b1);background:var(--bg)">
+              <div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:8px">TRACKING COOKIES</div>
+              <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:8px">Volledig verwijderd.</div>
+              <div style="font-size:10px;color:var(--t3);line-height:1.8">Alle tracking cookies (<code style="color:var(--g)">_ga, _fbp, _fbc, _ttp</code>…) worden gestript vóór het request de Wall verlaat. Ze bereiken Google of Meta nooit.</div>
+            </div>
+
+            <div style="padding:20px;border:1px solid var(--b1);background:var(--bg)">
+              <div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:8px">DATA FORWARDING</div>
+              <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:8px">Alleen wat jij toestaat.</div>
+              <div style="font-size:10px;color:var(--t3);line-height:1.8">Alleen events die jij expliciet toestaat (bijv. <code style="color:var(--g)">page_view</code>) gaan in geanonimiseerde vorm verder. Alle PII-velden zijn verwijderd of gehasht.</div>
+            </div>
+
+            <div style="padding:20px;border:1px solid var(--b1);background:var(--bg)">
+              <div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:8px">LOGGING</div>
+              <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:8px">Zero raw logging.</div>
+              <div style="font-size:10px;color:var(--t3);line-height:1.8">Geen enkel request wordt opgeslagen. De Wall verwerkt en vergeet. Alleen maandtotalen (integers) worden bewaard. Geen tijdstempels per event.</div>
+            </div>
+
+            <div style="padding:20px;border:1px solid var(--b1);background:var(--bg)">
+              <div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:8px">CONTROLE</div>
+              <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:8px">Publieke feed. Altijd.</div>
+              <div style="font-size:10px;color:var(--t3);line-height:1.8">Elke klant heeft een publieke feed (<code style="color:var(--g)">/feed/[hash]</code>) die live toont wat er gestript, geblokkeerd en doorgelaten wordt. Iedereen kan meekijken.</div>
+            </div>
+
+            <div style="padding:20px;border:1px solid var(--b1);background:var(--bg)">
+              <div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:8px">COOKIE WALL AP</div>
+              <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:8px">Geen banner meer nodig.</div>
+              <div style="font-size:10px;color:var(--t3);line-height:1.8">De AP verbiedt cookie walls. Paramant Wall maakt tracking cookies overbodig — geen gedwongen keuze voor bezoekers, geen cookie banner nodig op je site.</div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+      id="features">
   <div class="sec-lbl">
       <!-- AP Cookie Wall sectie -->
       <section style="background:#111214;border-top:1px solid #1e2026;border-bottom:1px solid #1e2026;padding:56px 20px">
