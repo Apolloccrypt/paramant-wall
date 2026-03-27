@@ -154,5 +154,57 @@ document.addEventListener('keydown', function(e) {
 });
 </script>
 
+<div style="max-width:420px;width:100%;margin-top:12px">
+  <div style="border:1px solid rgba(239,68,68,.2);background:rgba(239,68,68,.03);padding:16px 20px">
+    <div style="font-size:9px;color:#f87171;letter-spacing:.1em;margin-bottom:10px">// ACCOUNT VERWIJDEREN</div>
+    <div style="font-size:11px;color:var(--t3);line-height:1.7;margin-bottom:12px">
+      Wil je je account en alle gegevens permanent verwijderen? Je ontvangt een bevestigingsmail.
+    </div>
+    <div style="display:flex;gap:8px">
+      <input type="email" id="delete-email" placeholder="jij@bedrijf.nl"
+        style="flex:1;padding:9px 11px;background:var(--bg);border:1px solid rgba(239,68,68,.25);color:var(--t1);font-family:var(--mono);font-size:11px;outline:none">
+      <button onclick="requestDelete()"
+        style="padding:9px 14px;border:1px solid rgba(239,68,68,.4);color:#f87171;background:transparent;font-family:var(--mono);font-size:10px;cursor:pointer;white-space:nowrap;letter-spacing:.04em">
+        &#x26A0; VERWIJDEREN
+      </button>
+    </div>
+    <div style="font-size:9px;color:var(--t4);margin-top:6px;line-height:1.6">
+      Je ontvangt een bevestigingsmail. Pas na klikken wordt het account verwijderd.
+    </div>
+    <div id="delete-msg" style="display:none;margin-top:8px;padding:8px 10px;font-size:10px;line-height:1.7"></div>
+  </div>
+</div>
+
+<script>
+async function requestDelete() {
+  var email = (document.getElementById('delete-email') || {}).value || '';
+  var msg   = document.getElementById('delete-msg');
+  if (!email || email.indexOf('@') < 1) {
+    msg.style.display = 'block';
+    msg.style.background = 'rgba(239,68,68,.08)';
+    msg.style.border = '1px solid rgba(239,68,68,.2)';
+    msg.style.color = '#f87171';
+    msg.textContent = '[!] Vul een geldig e-mailadres in.';
+    return;
+  }
+  try {
+    var r = await fetch('/api/gdpr/delete', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email: email.trim().toLowerCase()})
+    });
+    var d = await r.json();
+    msg.style.display = 'block';
+    msg.style.background = 'rgba(0,255,157,.06)';
+    msg.style.border = '1px solid rgba(0,255,157,.18)';
+    msg.style.color = '#00ff9d';
+    msg.textContent = '[OK] ' + (d.message || 'Als dit account bestaat, ontvang je een bevestigingsmail.');
+  } catch(e) {
+    msg.style.display = 'block';
+    msg.style.color = '#f87171';
+    msg.textContent = '[!] Netwerkfout. Probeer opnieuw.';
+  }
+}
+</script>
 </body>
 </html>
