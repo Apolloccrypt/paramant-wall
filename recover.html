@@ -135,7 +135,7 @@ async function submitRecovery() {
 
   try {
     var body = { email: email.trim().toLowerCase() };
-    if (_captchaSolved) body.captcha_token = 'solved';
+    if (_captchaSolved && _captchaToken) { body.captcha_token = _captchaToken; body.captcha_answer = (document.getElementById('captcha-input')||{}).value || ''; }
 
     var r = await fetch(BASE + '/api/auth/recover', {
       method: 'POST',
@@ -168,33 +168,56 @@ function checkCaptcha() {
   if (_attempts >= 3 && !_captchaSolved) showCaptcha();
 }
 
-function showCaptcha() {
-  var existing = document.getElementById('captcha-box');
-  if (existing) return;
-  var a = Math.floor(Math.random()*9)+1;
-  var b = Math.floor(Math.random()*9)+1;
-  var answer = a + b;
-  var box = document.createElement('div');
-  box.id = 'captcha-box';
-  box.style.cssText = 'margin-bottom:10px;padding:12px;border:1px solid rgba(0,255,157,.3);background:rgba(0,255,157,.04)';
-  box.innerHTML = '<div style="font-size:10px;color:var(--g);letter-spacing:.08em;margin-bottom:8px">// VERIFICATIE VEREIST</div>'
-    + '<div style="font-size:12px;color:var(--t2);margin-bottom:8px">Wat is ' + a + ' + ' + b + '?</div>'
-    + '<input id="captcha-input" type="number" placeholder="Antwoord" style="width:100%;padding:8px 10px;background:var(--bg);border:1px solid var(--b2);color:var(--t1);font-family:var(--mono);font-size:12px;outline:none;margin-bottom:6px">'
-    + '<button onclick="solveCaptcha(' + answer + ')" style="width:100%;padding:8px;background:var(--g);color:var(--bg);font-family:var(--mono);font-size:10px;font-weight:800;border:none;cursor:pointer">VERIFIEER</button>'
-    + '<div id="captcha-err" style="display:none;font-size:10px;color:#f87171;margin-top:4px"></div>';
-  var btn = document.getElementById('submit-btn');
-  btn.parentNode.insertBefore(box, btn);
+var _captchaToken = null;
+
+async function showCaptcha() {
+  if (document.getElementById('captcha-box')) return;
+  try {
+    // Haal captcha op van server
+    var r = await fetch(BASE + '/api/captcha');
+    var d = await r.json();
+    _captchaToken = d.token;
+
+    var box = document.createElement('div');
+    box.id = 'captcha-box';
+    box.style.cssText = 'margin-bottom:10px;padding:12px;border:1px solid rgba(0,255,157,.3);background:rgba(0,255,157,.04)';
+    box.innerHTML = '<div style="font-size:10px;color:var(--g);letter-spacing:.08em;margin-bottom:8px">// VERIFICATIE VEREIST</div>'
+      + '<div style="font-size:12px;color:var(--t2);margin-bottom:8px">' + d.question + '</div>'
+      + '<input id="captcha-input" type="number" placeholder="Antwoord" style="width:100%;padding:8px 10px;background:var(--bg);border:1px solid var(--b2);color:var(--t1);font-family:var(--mono);font-size:12px;outline:none;margin-bottom:6px">'
+      + '<button onclick="solveCaptcha()" style="width:100%;padding:8px;background:var(--g);color:var(--bg);font-family:var(--mono);font-size:10px;font-weight:800;border:none;cursor:pointer">VERIFIEER</button>'
+      + '<div id="captcha-err" style="display:none;font-size:10px;color:#f87171;margin-top:4px"></div>';
+    var btn = document.getElementById('submit-btn');
+    btn.parentNode.insertBefore(box, btn);
+  } catch(e) {
+    // Fail open — laat door als captcha server niet bereikbaar
+    _captchaSolved = true;
+  }
 }
 
-function solveCaptcha(correct) {
-  var input = parseInt((document.getElementById('captcha-input') || {}).value);
-  if (input === correct) {
-    _captchaSolved = true;
-    var box = document.getElementById('captcha-box');
-    if (box) box.innerHTML = '<div style="font-size:10px;color:var(--g)">[OK] Verificatie geslaagd.</div>';
-  } else {
-    var errEl = document.getElementById('captcha-err');
-    if (errEl) { errEl.style.display = 'block'; errEl.textContent = '[!] Onjuist. Probeer opnieuw.'; }
+async function solveCaptcha() {
+  var input = (document.getElementById('captcha-input') || {}).value || '';
+  try {
+    var r = await fetch(BASE + '/api/captcha/verify', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ token: _captchaToken, answer: input })
+    });
+    var d = await r.json();
+    if (d.ok) {
+      _captchaSolved = true;
+      // Bewaar token voor submit
+      var box = document.getElementById('captcha-box');
+      if (box) box.innerHTML = '<div style="font-size:10px;color:var(--g)">[OK] Verificatie geslaagd.</div>';
+    } else {
+      // Nieuwe captcha laden
+      _captchaToken = null;
+      document.getElementById('captcha-box').remove();
+      showCaptcha();
+      var errEl = document.getElementById('captcha-err');
+      if (errEl) { errEl.style.display = 'block'; errEl.textContent = '[!] Onjuist. Nieuwe vraag geladen.'; }
+    }
+  } catch(e) {
+    _captchaSolved = true; // fail open
   }
 }
 
@@ -226,17 +249,39 @@ document.addEventListener('keydown', function(e) {
 </div>
 
 <script>
+var _deleteCaptchaSolved = false;
+var _deleteAttempts = 0;
+
 async function requestDelete() {
   var email = (document.getElementById('delete-email') || {}).value || '';
   var msg   = document.getElementById('delete-msg');
+
   if (!email || email.indexOf('@') < 1) {
+    _deleteAttempts++;
     msg.style.display = 'block';
     msg.style.background = 'rgba(239,68,68,.08)';
     msg.style.border = '1px solid rgba(239,68,68,.2)';
     msg.style.color = '#f87171';
     msg.textContent = '[!] Vul een geldig e-mailadres in.';
+    if (_deleteAttempts >= 2) showDeleteCaptcha();
     return;
   }
+
+  // Captcha vereist na 2 pogingen
+  if (_deleteAttempts >= 2 && !_deleteCaptchaSolved) {
+    showDeleteCaptcha();
+    msg.style.display = 'block';
+    msg.style.color = '#f87171';
+    msg.textContent = '[!] Los eerst de verificatie op.';
+    return;
+  }
+
+  _deleteAttempts++;
+  if (_deleteAttempts >= 2 && !_deleteCaptchaSolved) {
+    showDeleteCaptcha();
+    return;
+  }
+
   try {
     var r = await fetch('/api/gdpr/delete', {
       method: 'POST',
@@ -254,6 +299,48 @@ async function requestDelete() {
     msg.style.color = '#f87171';
     msg.textContent = '[!] Netwerkfout. Probeer opnieuw.';
   }
+}
+
+var _deleteCaptchaToken = null;
+
+async function showDeleteCaptcha() {
+  if (document.getElementById('delete-captcha')) return;
+  try {
+    var r = await fetch('/api/captcha');
+    var d = await r.json();
+    _deleteCaptchaToken = d.token;
+    var box = document.createElement('div');
+    box.id = 'delete-captcha';
+    box.style.cssText = 'margin-top:8px;padding:12px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.04)';
+    box.innerHTML = '<div style="font-size:9px;color:#f87171;letter-spacing:.08em;margin-bottom:8px">// VERIFICATIE VEREIST</div>'
+      + '<div style="font-size:12px;color:var(--t2);margin-bottom:8px">' + d.question + '</div>'
+      + '<input id="delete-captcha-input" type="number" placeholder="Antwoord" style="width:100%;padding:8px;background:var(--bg);border:1px solid rgba(239,68,68,.25);color:var(--t1);font-family:var(--mono);font-size:12px;outline:none;margin-bottom:6px">'
+      + '<button onclick="solveDeleteCaptcha()" style="width:100%;padding:8px;background:rgba(239,68,68,.8);color:#fff;font-family:var(--mono);font-size:10px;font-weight:800;border:none;cursor:pointer">VERIFIEER</button>'
+      + '<div id="delete-captcha-err" style="display:none;font-size:10px;color:#f87171;margin-top:4px"></div>';
+    var msgEl = document.getElementById('delete-msg');
+    if (msgEl) msgEl.parentNode.insertBefore(box, msgEl);
+  } catch(e) { _deleteCaptchaSolved = true; }
+}
+
+async function solveDeleteCaptcha() {
+  var input = (document.getElementById('delete-captcha-input')||{}).value || '';
+  try {
+    var r = await fetch('/api/captcha/verify', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ token: _deleteCaptchaToken, answer: input })
+    });
+    var d = await r.json();
+    if (d.ok) {
+      _deleteCaptchaSolved = true;
+      var box = document.getElementById('delete-captcha');
+      if (box) box.innerHTML = '<div style="font-size:10px;color:#f87171">[OK] Verificatie geslaagd.</div>';
+    } else {
+      _deleteCaptchaToken = null;
+      document.getElementById('delete-captcha').remove();
+      showDeleteCaptcha();
+    }
+  } catch(e) { _deleteCaptchaSolved = true; }
 }
 </script>
 </body>

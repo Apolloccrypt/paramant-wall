@@ -248,7 +248,8 @@ if (!SESSION_SECRET) {
 
 function createToken(userId) {
   const payload = userId + ':' + Math.floor(Date.now() / 1000);
-  const sig = crypto.createHmac('sha256', SESSION_SECRET || 'fallback').update(payload).digest('hex');
+  if (!SESSION_SECRET) throw new Error('SESSION_SECRET not configured');
+  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
   return Buffer.from(payload + ':' + sig).toString('base64url');
 }
 
@@ -259,7 +260,8 @@ function verifyToken(token) {
     if (parts.length !== 3) return null;
     const [userId, ts, sig] = parts;
     const payload  = userId + ':' + ts;
-    const expected = crypto.createHmac('sha256', SESSION_SECRET || 'fallback').update(payload).digest('hex');
+    if (!SESSION_SECRET) return null;
+    const expected = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
     if (!crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(sig))) return null;
     if (Date.now() / 1000 - parseInt(ts) > 86400 * 30) return null;
     return userId;
@@ -739,7 +741,7 @@ app.post('/api/auth/login', async function(req, res) {
   const ip = getClientIP(req);
   if (!await rateLimit('login:' + anonymizeIP(ip), 5, 900)) {
     logSecurityEvent('rate_limit_hit', {}).catch(function(){});
-  return res.status(429).json({ error: 'rate_limit' });
+    return res.status(429).json({ error: 'rate_limit' });
   }
 
   const r = await pg.query(
@@ -1258,6 +1260,47 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/privacy',  function(req, res) { res.sendFile(path.join(__dirname, 'public', 'privacy.html')); });
 app.get('/recover', function(req, res) { res.sendFile(path.join(__dirname, 'public', 'recover.html')); });
 
+// Server-side captcha genereren
+app.get('/api/captcha', async function(req, res) {
+  const ip = getClientIP(req);
+  const ipKey = 'captcha_rl:' + sha256(ip).slice(0, 16);
+  const cnt = parseInt(await redisGet(ipKey) || 0) || 0;
+  if (cnt > 50) return res.status(429).json({ error: 'rate_limit' });
+  await redisSet(ipKey, String(cnt + 1), 3600);
+
+  const a = Math.floor(Math.random() * 9) + 1;
+  const b = Math.floor(Math.random() * 9) + 1;
+  const answer = a + b;
+  const token = require('crypto').randomBytes(16).toString('hex');
+  const tokenHash = sha256(token);
+
+  // Sla antwoord op in Redis — 5 minuten geldig, eenmalig
+  await redisSet('captcha:' + tokenHash, String(answer), 300);
+
+  res.json({ token: token, question: a + ' + ' + b + ' = ?' });
+});
+
+// Server-side captcha verificatie endpoint
+app.post('/api/captcha/verify', async function(req, res) {
+  const { token, answer } = req.body || {};
+  const valid = await validateCaptcha(token, answer);
+  if (valid) {
+    return res.json({ ok: true });
+  }
+  return res.json({ ok: false });
+});
+
+// Server-side captcha valideren
+async function validateCaptcha(token, answer) {
+  if (!token || !answer) return false;
+  const tokenHash = sha256(token);
+  const stored = await redisGet('captcha:' + tokenHash);
+  if (!stored) return false;
+  // Eenmalig — verwijder na gebruik
+  await redis.del('captcha:' + tokenHash).catch(() => {});
+  return String(stored) === String(answer);
+}
+
 // CSRF token endpoint voor recover + gdpr formulieren
 app.get('/api/csrf-token', function(req, res) {
   const token = require('crypto').randomBytes(32).toString('hex');
@@ -1566,10 +1609,14 @@ app.get('/api/auth/recover', async function(req, res) {
 
 
 
-// Waarschuw als ADMIN_TOKEN niet geconfigureerd is
-if (!process.env.ADMIN_TOKEN) {
-  console.warn('[WALL] WAARSCHUWING: ADMIN_TOKEN niet ingesteld — /stats endpoint is geblokkeerd');
-}
+// Fail hard bij ontbrekende kritieke env vars
+const REQUIRED_ENV = ['DATABASE_URL', 'STRIPE_SECRET_KEY', 'SESSION_SECRET'];
+REQUIRED_ENV.forEach(function(k) {
+  if (!process.env[k]) {
+    console.error('[WALL] KRITIEK: Ontbrekende env var:', k);
+    process.exit(1);
+  }
+});
 
 app.get('/api/version', function(req, res) {
   res.setHeader('Cache-Control', 'public, max-age=3600');

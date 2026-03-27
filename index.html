@@ -768,7 +768,7 @@ async function wmSubmit() {
       var sn = document.getElementById('wm-snip'); if (sn) sn.textContent = d.snippet || '';
       var fu = document.getElementById('wm-feed'); if (fu) fu.textContent = feedUrl;
       var fl = document.getElementById('wm-feedlink'); if (fl) fl.href = feedUrl;
-      try { localStorage.setItem('wall_token', d.token || ''); } catch(e) {}
+      try { sessionStorage.setItem('wall_token', d.token || ''); } catch(e) {}
     }, 400);
   } catch(e) {
     clearInterval(iv); wmStep(1); showWmErr(e.message);
