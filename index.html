@@ -632,6 +632,20 @@ footer{border-top:1px solid var(--b1);padding:24px;max-width:1100px;margin:0 aut
 <script>
 var _wmp = 'starter';
 function wmOpen(plan) {
+  // Check of er een config is opgeslagen
+  try {
+    var _sc = JSON.parse(localStorage.getItem('wall_tracker_config') || 'null');
+    if (_sc && _sc.config) {
+      var _cfgLink = document.querySelector('a[href="/config.html"]');
+      if (_cfgLink) {
+        var _vals = Object.values(_sc.config);
+        var _blk = _vals.filter(function(v){ return v === 'block'; }).length;
+        _cfgLink.innerHTML = '&#x2713; CONFIG GELADEN: ' + _blk + ' geblokkeerd &mdash; Aanpassen &#x2192;';
+        _cfgLink.style.borderColor = 'rgba(0,255,157,.4)';
+        _cfgLink.style.background = 'rgba(0,255,157,.08)';
+      }
+    }
+  } catch(e) {}
   _wmp = plan || 'starter';
   if (typeof wmPlan === 'function') wmPlan(_wmp, null);
   var t = {starter:'STARTER \u2014 \u20ac19/mnd', pro:'PRO \u2014 \u20ac49/mnd', business:'BUSINESS \u2014 \u20ac99/mnd'};
@@ -693,6 +707,14 @@ document.addEventListener('DOMContentLoaded', function() {
   if (rb) rb.addEventListener('click', function() { wmOpen('starter'); });
 });
 async function wmSubmit() {
+  // Lees tracker config uit localStorage (ingesteld via /config.html)
+  var _savedConfig = {};
+  var _savedCustom = [];
+  try {
+    var _stored = JSON.parse(localStorage.getItem('wall_tracker_config') || '{}');
+    if (_stored.config) _savedConfig = _stored.config;
+    if (_stored.custom) _savedCustom = _stored.custom;
+  } catch(e) {}
   var emailEl = document.getElementById('wm-email'); var email = (emailEl && emailEl.value) ? emailEl.value.trim() : '';
   var pass = '';
   var terms = document.getElementById('wm-terms').checked;
@@ -724,7 +746,7 @@ async function wmSubmit() {
     var r = await fetch('https://wall.paramant.app/api/auth/register', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email: email, plan: _wmp, acceptTerms: terms, domain: document.getElementById('wm-domain') ? document.getElementById('wm-domain').value : '', template: typeof _wmTemplate !== 'undefined' ? _wmTemplate : 'ultra-streng'})
+      body: JSON.stringify({email: email, plan: _wmp, acceptTerms: terms, domain: document.getElementById('wm-domain') ? document.getElementById('wm-domain').value : '', template: typeof _wmTemplate !== 'undefined' ? _wmTemplate : 'ultra-streng', trackerConfig: _savedConfig, customTrackers: _savedCustom})
     });
     var d;
     try { d = await r.json(); } catch(pe) { throw new Error('Server antwoord onleesbaar.'); }

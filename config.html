@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PARAMANT WALL — Tracker Configuratie</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c0e10;--s1:#111214;--s2:#1a1d22;
+  --b1:#1e2026;--b2:#2a2d35;
+  --t1:#e2e4e8;--t2:#c8ccd4;--t3:#8a8e98;--t4:#5a6070;
+  --g:#00ff9d;--gd:rgba(0,255,157,.06);--gb:rgba(0,255,157,.18);
+  --red:#ef4444;--amber:#f5c400;--blue:#60a5fa;--purple:#a78bfa;
+  --mono:ui-monospace,'Cascadia Code','Fira Code',monospace;
+}
+body{background:var(--bg);color:var(--t2);font-family:var(--mono);min-height:100vh}
+nav{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--b1);
+  display:flex;align-items:center;padding:0 20px;height:48px;gap:0}
+.logo{font-size:13px;font-weight:800;color:var(--t1);text-decoration:none;margin-right:20px}
+.logo span{color:var(--g)}
+.nav-link{font-size:10px;color:var(--t3);text-decoration:none;padding:0 14px;height:48px;
+  display:flex;align-items:center;border-left:1px solid var(--b1);letter-spacing:.05em;transition:color .15s}
+.nav-link:hover{color:var(--g)}
+.ml-auto{margin-left:auto}
+
+main{max-width:1200px;margin:0 auto;padding:24px 20px}
+
+h1{font-size:16px;font-weight:800;color:var(--t1);margin-bottom:4px}
+.subtitle{font-size:11px;color:var(--t4);margin-bottom:20px;line-height:1.6}
+
+/* FILTERS */
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.filter-btn{padding:5px 12px;background:var(--b1);border:1px solid var(--b2);color:var(--t3);
+  font-family:var(--mono);font-size:9px;letter-spacing:.06em;cursor:pointer;transition:all .15s}
+.filter-btn.active{background:var(--gd);border-color:var(--gb);color:var(--g)}
+.filter-btn:hover{color:var(--t1)}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:20px}
+@media(max-width:700px){.stats-row{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--s1);border:1px solid var(--b1);padding:12px;text-align:center}
+.stat-n{font-size:20px;font-weight:800;color:var(--t1)}
+.stat-l{font-size:8px;color:var(--t4);letter-spacing:.08em;margin-top:2px}
+
+/* TABLE */
+.table-wrap{background:var(--s1);border:1px solid var(--b1)}
+.table-head{display:grid;grid-template-columns:2fr 1fr 1fr 1.5fr 80px;
+  padding:8px 14px;background:var(--s2);border-bottom:1px solid var(--b1);
+  font-size:8px;color:var(--t4);letter-spacing:.08em;gap:8px}
+.tracker-row{display:grid;grid-template-columns:2fr 1fr 1fr 1.5fr 80px;
+  padding:9px 14px;border-bottom:1px solid var(--b1);align-items:center;
+  gap:8px;font-size:11px;transition:background .1s}
+.tracker-row:hover{background:var(--s2)}
+.tracker-row:last-child{border:none}
+
+.tracker-name{font-weight:600;color:var(--t1);font-size:10px}
+.tracker-vendor{font-size:9px;color:var(--t4);margin-top:1px}
+.cat-badge{display:inline-block;padding:2px 6px;font-size:8px;letter-spacing:.04em}
+.cat-advertising{background:rgba(239,68,68,.08);color:#f87171}
+.cat-analytics{background:rgba(245,196,0,.08);color:#f5c400}
+.cat-social{background:rgba(96,165,250,.08);color:#60a5fa}
+.cat-consent{background:var(--gd);color:var(--g)}
+.cat-utilities{background:rgba(167,139,250,.08);color:#a78bfa}
+
+/* ACTION SELECTOR */
+.action-sel{display:flex;gap:2px}
+.act-btn{padding:3px 8px;font-family:var(--mono);font-size:8px;letter-spacing:.04em;
+  cursor:pointer;border:1px solid var(--b2);background:var(--bg);color:var(--t4);transition:all .1s}
+.act-btn:hover{color:var(--t2)}
+.act-btn.active-block{background:rgba(239,68,68,.1);border-color:#f87171;color:#f87171}
+.act-btn.active-strip{background:rgba(245,196,0,.08);border-color:#f5c400;color:#f5c400}
+.act-btn.active-allow{background:var(--gd);border-color:var(--gb);color:var(--g)}
+
+/* CUSTOM DOMAIN INPUT */
+.custom-section{background:var(--s1);border:1px solid var(--b1);padding:16px;margin-top:12px}
+.custom-title{font-size:9px;color:var(--t4);letter-spacing:.1em;margin-bottom:10px}
+.custom-add{display:flex;gap:8px;margin-bottom:10px}
+.custom-add input{flex:1;padding:8px 10px;background:var(--bg);border:1px solid var(--b2);
+  color:var(--t1);font-family:var(--mono);font-size:11px;outline:none}
+.custom-add select{padding:8px 10px;background:var(--bg);border:1px solid var(--b2);
+  color:var(--t1);font-family:var(--mono);font-size:10px;outline:none}
+.btn-add{padding:8px 16px;background:var(--g);color:var(--bg);font-family:var(--mono);
+  font-size:9px;font-weight:800;border:none;cursor:pointer;letter-spacing:.06em}
+.custom-list{display:flex;flex-direction:column;gap:4px}
+.custom-item{display:flex;align-items:center;justify-content:space-between;
+  padding:6px 10px;background:var(--bg);border:1px solid var(--b1);font-size:10px}
+.custom-item-domain{color:var(--t2)}
+.custom-item-action{font-size:8px;padding:2px 6px}
+.btn-remove{background:transparent;border:none;color:var(--t4);cursor:pointer;font-size:11px;padding:0 4px}
+.btn-remove:hover{color:#f87171}
+
+/* SAVE BAR */
+.save-bar{position:fixed;bottom:0;left:0;right:0;background:var(--s1);border-top:1px solid var(--b1);
+  padding:12px 20px;display:flex;align-items:center;justify-content:space-between;z-index:50}
+.save-bar-text{font-size:10px;color:var(--t3)}
+.btn-save{padding:10px 24px;background:var(--g);color:var(--bg);font-family:var(--mono);
+  font-size:10px;font-weight:800;border:none;cursor:pointer;letter-spacing:.06em}
+.btn-save:hover{background:#00cc7a}
+
+.search-box{padding:7px 11px;background:var(--bg);border:1px solid var(--b2);
+  color:var(--t1);font-family:var(--mono);font-size:11px;outline:none;width:220px;margin-left:auto;margin-right:8px}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="logo">PARA<span>MANT</span> WALL</a>
+  <a href="/" class="nav-link">Home</a>
+  <a href="/feed" class="nav-link">Feed</a>
+  <span class="nav-link ml-auto" style="color:var(--g);border-left:none">// TRACKER CONFIGURATIE</span>
+</nav>
+
+<main>
+  <h1>Tracker Configuratie</h1>
+  <p class="subtitle">Kies per tracker wat de Wall doet: blokkeren, cookies strippen + IP anonimiseren, of doorlaten.<br>
+  Voeg eigen domeinen toe. Wijzigingen worden opgeslagen per API key.</p>
+
+  <!-- Template snelkeuze -->
+  <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+    <span style="font-size:9px;color:var(--t4);align-self:center;letter-spacing:.08em">SNEL INSTELLEN:</span>
+    <button onclick="applyTemplate('ultra-streng')" class="filter-btn">&#x26D4; Ultra Streng</button>
+    <button onclick="applyTemplate('basis-analytics')" class="filter-btn">~ Basis Analytics</button>
+    <button onclick="applyTemplate('marketing-light')" class="filter-btn">&gt;&gt; Marketing Light</button>
+    <button onclick="applyTemplate('alles-allow')" class="filter-btn" style="color:#f87171;border-color:rgba(239,68,68,.3)">&#x26A0; Alles doorlaten</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat"><div class="stat-n" id="cnt-total">0</div><div class="stat-l">TOTAAL TRACKERS</div></div>
+    <div class="stat"><div class="stat-n" style="color:#f87171" id="cnt-block">0</div><div class="stat-l">GEBLOKKEERD</div></div>
+    <div class="stat"><div class="stat-n" style="color:#f5c400" id="cnt-strip">0</div><div class="stat-l">GESTRIPT</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--g)" id="cnt-allow">0</div><div class="stat-l">DOORGELATEN</div></div>
+    <div class="stat"><div class="stat-n" style="color:#a78bfa" id="cnt-custom">0</div><div class="stat-l">CUSTOM REGELS</div></div>
+  </div>
+
+  <!-- Filters + zoek -->
+  <div style="display:flex;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    <div class="filters" style="margin:0">
+      <button class="filter-btn active" onclick="setFilter('all',this)">Alles</button>
+      <button class="filter-btn" onclick="setFilter('advertising',this)">&#128276; Advertising</button>
+      <button class="filter-btn" onclick="setFilter('analytics',this)">&#128200; Analytics</button>
+      <button class="filter-btn" onclick="setFilter('social',this)">&#128241; Social</button>
+      <button class="filter-btn" onclick="setFilter('consent',this)">&#128274; Consent</button>
+      <button class="filter-btn" onclick="setFilter('utilities',this)">&#9881; Utilities</button>
+      <button class="filter-btn" onclick="setFilter('custom',this)" style="color:#a78bfa;border-color:rgba(167,139,250,.3)">+ Custom</button>
+    </div>
+    <input class="search-box" type="text" placeholder="Zoek tracker..." oninput="filterSearch(this.value)">
+  </div>
+
+  <!-- Tabel -->
+  <div class="table-wrap" id="tracker-table">
+    <div class="table-head">
+      <div>TRACKER</div>
+      <div>VENDOR</div>
+      <div>CATEGORIE</div>
+      <div>ACTIE</div>
+      <div>COOKIES</div>
+    </div>
+    <div id="tracker-rows"></div>
+  </div>
+
+  <!-- Custom domeinen -->
+  <div class="custom-section" id="custom-section">
+    <div class="custom-title">+ EIGEN DOMEINEN / TRACKERS TOEVOEGEN</div>
+    <div class="custom-add">
+      <input type="text" id="custom-domain" placeholder="bijv. analytics.mijnpartner.nl" maxlength="200">
+      <select id="custom-action">
+        <option value="block">&#x26D4; Blokkeren</option>
+        <option value="strip">~ Strippen</option>
+        <option value="allow">&#x2713; Doorlaten</option>
+      </select>
+      <button class="btn-add" onclick="addCustom()">+ TOEVOEGEN</button>
+    </div>
+    <div class="custom-list" id="custom-list"></div>
+  </div>
+
+  <div style="height:64px"></div>
+</main>
+
+<div class="save-bar">
+  <span class="save-bar-text" id="save-status">Wijzigingen worden automatisch meegenomen bij Stripe checkout.</span>
+  <button class="btn-save" onclick="saveConfig()">OPSLAAN &amp; ACTIVEREN</button>
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────
+const BUILT_IN = [
+  // Analytics
+  {key:'ga4',name:'Google Analytics 4',vendor:'Google',cat:'analytics',def:'strip',cookies:['_ga','_gid','_gat']},
+  {key:'hotjar',name:'Hotjar',vendor:'Hotjar',cat:'analytics',def:'block',cookies:['_hjid','_hjSession']},
+  {key:'mixpanel',name:'Mixpanel',vendor:'Mixpanel',cat:'analytics',def:'block',cookies:['mp_']},
+  {key:'amplitude',name:'Amplitude',vendor:'Amplitude',cat:'analytics',def:'block',cookies:[]},
+  {key:'segment',name:'Segment',vendor:'Twilio',cat:'analytics',def:'block',cookies:['ajs_user_id']},
+  {key:'chartbeat',name:'Chartbeat',vendor:'Chartbeat',cat:'analytics',def:'block',cookies:['_cb']},
+  {key:'comscore',name:'Comscore / ScoreCard',vendor:'comScore',cat:'analytics',def:'block',cookies:['UID']},
+  {key:'ms_clarity',name:'Microsoft Clarity',vendor:'Microsoft',cat:'analytics',def:'block',cookies:['_clck']},
+  {key:'new_relic',name:'New Relic',vendor:'New Relic',cat:'analytics',def:'block',cookies:[]},
+  {key:'datadog',name:'Datadog RUM',vendor:'Datadog',cat:'analytics',def:'block',cookies:['_dd_s']},
+  {key:'fullstory',name:'FullStory',vendor:'FullStory',cat:'analytics',def:'block',cookies:['fs_uid']},
+  {key:'quantcast',name:'Quantcast',vendor:'Quantcast',cat:'analytics',def:'block',cookies:['mc','__qca']},
+  {key:'parsely',name:'Parse.ly',vendor:'Parse.ly',cat:'analytics',def:'block',cookies:['_parsely_visitor']},
+  {key:'yandex',name:'Yandex Metrika',vendor:'Yandex',cat:'analytics',def:'block',cookies:['_ym_uid']},
+  {key:'piano',name:'Piano Analytics',vendor:'Piano',cat:'analytics',def:'block',cookies:['atuserid']},
+  {key:'heap',name:'Heap Analytics',vendor:'Contentsquare',cat:'analytics',def:'block',cookies:['_hp2_id']},
+  {key:'pendo',name:'Pendo',vendor:'Pendo',cat:'analytics',def:'block',cookies:[]},
+  {key:'hubspot',name:'HubSpot Analytics',vendor:'HubSpot',cat:'analytics',def:'block',cookies:['hubspotutk','__hstc']},
+  {key:'wordpress_stats',name:'WordPress Stats',vendor:'Automattic',cat:'analytics',def:'block',cookies:[]},
+  // Advertising
+  {key:'meta_pixel',name:'Meta Pixel',vendor:'Meta',cat:'advertising',def:'block',cookies:['_fbp','_fbc','fr']},
+  {key:'google_ads',name:'Google Ads / DoubleClick',vendor:'Google',cat:'advertising',def:'block',cookies:['IDE','ANID','__gads']},
+  {key:'tiktok',name:'TikTok Pixel',vendor:'ByteDance',cat:'advertising',def:'block',cookies:['_ttp','_tt_enable_cookie']},
+  {key:'linkedin_ads',name:'LinkedIn Insight Tag',vendor:'Microsoft',cat:'advertising',def:'block',cookies:['li_sugr','bcookie']},
+  {key:'microsoft_ads',name:'Microsoft Advertising',vendor:'Microsoft',cat:'advertising',def:'block',cookies:['_uetsid','_uetvid']},
+  {key:'criteo',name:'Criteo',vendor:'Criteo',cat:'advertising',def:'block',cookies:['cto_bundle']},
+  {key:'taboola',name:'Taboola',vendor:'Taboola',cat:'advertising',def:'block',cookies:['taboola_session_id']},
+  {key:'outbrain',name:'Outbrain',vendor:'Outbrain',cat:'advertising',def:'block',cookies:['obuid']},
+  {key:'tradedesk',name:'The Trade Desk',vendor:'The Trade Desk',cat:'advertising',def:'block',cookies:['TDID']},
+  {key:'amazon_ads',name:'Amazon Advertising',vendor:'Amazon',cat:'advertising',def:'block',cookies:['ad-id']},
+  {key:'pinterest',name:'Pinterest Tag',vendor:'Pinterest',cat:'advertising',def:'block',cookies:['_pinterest_sess']},
+  {key:'snapchat',name:'Snapchat Pixel',vendor:'Snap',cat:'advertising',def:'block',cookies:['_scid']},
+  {key:'reddit_ads',name:'Reddit Pixel',vendor:'Reddit',cat:'advertising',def:'block',cookies:['reddaid']},
+  {key:'adobe_audience',name:'Adobe Audience Manager',vendor:'Adobe',cat:'advertising',def:'block',cookies:['demdex']},
+  {key:'pubmatic',name:'PubMatic',vendor:'PubMatic',cat:'advertising',def:'block',cookies:['KRTBCOOKIE_']},
+  {key:'magnite',name:'Magnite (Rubicon)',vendor:'Magnite',cat:'advertising',def:'block',cookies:['rpx']},
+  {key:'appnexus',name:'AppNexus / Xandr',vendor:'Microsoft',cat:'advertising',def:'block',cookies:['uuid2']},
+  {key:'openx',name:'OpenX',vendor:'OpenX',cat:'advertising',def:'block',cookies:['i']},
+  {key:'twitter_x',name:'X (Twitter) Pixel',vendor:'X Corp.',cat:'social',def:'block',cookies:['guest_id','ct0']},
+  // Consent
+  {key:'onetrust',name:'OneTrust',vendor:'OneTrust',cat:'consent',def:'allow',cookies:['OptanonConsent']},
+  {key:'cookiebot',name:'Cookiebot',vendor:'Usercentrics',cat:'consent',def:'allow',cookies:['CookieConsent']},
+  {key:'didomi',name:'Didomi',vendor:'Didomi',cat:'consent',def:'allow',cookies:['euconsent-v2']},
+  // Utilities
+  {key:'sentry',name:'Sentry',vendor:'Sentry',cat:'utilities',def:'allow',cookies:[]},
+  {key:'cloudflare_insights',name:'Cloudflare Web Analytics',vendor:'Cloudflare',cat:'utilities',def:'allow',cookies:[]},
+  {key:'intercom',name:'Intercom',vendor:'Intercom',cat:'utilities',def:'strip',cookies:['intercom-id-']},
+  {key:'optimizely',name:'Optimizely',vendor:'Optimizely',cat:'utilities',def:'strip',cookies:['optimizelyEndUserId']},
+  {key:'zendesk',name:'Zendesk',vendor:'Zendesk',cat:'utilities',def:'allow',cookies:['ZD-']},
+];
+
+const TEMPLATES = {
+  'ultra-streng': {
+    ga4:'strip', hotjar:'block', mixpanel:'block', amplitude:'block', segment:'block',
+    chartbeat:'block', comscore:'block', ms_clarity:'block', new_relic:'block',
+    datadog:'block', fullstory:'block', quantcast:'block', parsely:'block',
+    yandex:'block', piano:'block', heap:'block', pendo:'block', hubspot:'block',
+    meta_pixel:'block', google_ads:'block', tiktok:'block', linkedin_ads:'block',
+    microsoft_ads:'block', criteo:'block', taboola:'block', outbrain:'block',
+    tradedesk:'block', amazon_ads:'block', pinterest:'block', snapchat:'block',
+    reddit_ads:'block', adobe_audience:'block', pubmatic:'block', magnite:'block',
+    appnexus:'block', openx:'block', twitter_x:'block',
+    onetrust:'allow', cookiebot:'allow', didomi:'allow',
+    sentry:'allow', cloudflare_insights:'allow', intercom:'strip', optimizely:'strip', zendesk:'allow',
+  },
+  'basis-analytics': {
+    ga4:'strip', hotjar:'strip', fullstory:'block', ms_clarity:'strip',
+    meta_pixel:'block', google_ads:'block', tiktok:'block', linkedin_ads:'block',
+  },
+  'marketing-light': {
+    ga4:'strip', meta_pixel:'strip', google_ads:'strip',
+    hotjar:'block', fullstory:'block', tiktok:'block',
+  },
+  'alles-allow': Object.fromEntries(BUILT_IN.map(t => [t.key, 'allow'])),
+};
+
+// ── State ─────────────────────────────────────────────────
+let config = Object.fromEntries(BUILT_IN.map(t => [t.key, t.def]));
+let custom = [];
+let activeFilter = 'all';
+let searchTerm = '';
+
+// ── Render ────────────────────────────────────────────────
+function render() {
+  const rows = document.getElementById('tracker-rows');
+  const list = BUILT_IN.filter(t => {
+    if (activeFilter === 'custom') return false;
+    if (activeFilter !== 'all' && t.cat !== activeFilter) return false;
+    if (searchTerm && !t.name.toLowerCase().includes(searchTerm) && !t.vendor.toLowerCase().includes(searchTerm)) return false;
+    return true;
+  });
+
+  rows.innerHTML = rows.innerHTML = list.map(t => {
+    const act = config[t.key] || t.def;
+    return `<div class="tracker-row" id="row-${t.key}">
+      <div>
+        <div class="tracker-name">${t.name}</div>
+        <div class="tracker-vendor">${t.vendor}</div>
+      </div>
+      <div style="font-size:9px;color:var(--t4)">${t.vendor}</div>
+      <div><span class="cat-badge cat-${t.cat}">${t.cat}</span></div>
+      <div class="action-sel">
+        <button class="act-btn ${act==='block'?'active-block':''}" onclick="setAction('${t.key}','block',this)">&#x26D4; BLOCK</button>
+        <button class="act-btn ${act==='strip'?'active-strip':''}" onclick="setAction('${t.key}','strip',this)">~ STRIP</button>
+        <button class="act-btn ${act==='allow'?'active-allow':''}" onclick="setAction('${t.key}','allow',this)">&#x2713; ALLOW</button>
+      </div>
+      <div style="font-size:8px;color:var(--t4)">${t.cookies.slice(0,2).join(', ')+(t.cookies.length>2?'…':'') || '—'}</div>
+    </div>`;
+  }).join('');
+
+  updateStats();
+}
+
+function updateStats() {
+  const vals = Object.values(config);
+  document.getElementById('cnt-total').textContent = BUILT_IN.length;
+  document.getElementById('cnt-block').textContent = vals.filter(v=>v==='block').length;
+  document.getElementById('cnt-strip').textContent = vals.filter(v=>v==='strip').length;
+  document.getElementById('cnt-allow').textContent = vals.filter(v=>v==='allow').length;
+  document.getElementById('cnt-custom').textContent = custom.length;
+}
+
+function setAction(key, action, btn) {
+  config[key] = action;
+  const row = document.getElementById('row-'+key);
+  if (row) {
+    row.querySelectorAll('.act-btn').forEach(b => b.className = 'act-btn');
+    btn.className = 'act-btn active-' + action;
+  }
+  updateStats();
+  flash('save-status', '● Niet opgeslagen wijzigingen');
+}
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function filterSearch(v) {
+  searchTerm = v.toLowerCase();
+  render();
+}
+
+var _activeTemplate = 'ultra-streng';
+function applyTemplate(tpl) {
+  _activeTemplate = tpl;
+  const t = TEMPLATES[tpl];
+  if (!t) return;
+  Object.assign(config, t);
+  render();
+  flash('save-status', '✓ Template "' + tpl + '" toegepast — sla op om te activeren');
+}
+
+function addCustom() {
+  const d = document.getElementById('custom-domain').value.trim();
+  const a = document.getElementById('custom-action').value;
+  if (!d) return;
+  custom.push({domain: d, action: a});
+  document.getElementById('custom-domain').value = '';
+  renderCustom();
+  updateStats();
+}
+
+function removeCustom(i) {
+  custom.splice(i, 1);
+  renderCustom();
+  updateStats();
+}
+
+function renderCustom() {
+  const list = document.getElementById('custom-list');
+  list.innerHTML = custom.map((c, i) => `
+    <div class="custom-item">
+      <span class="custom-item-domain">${c.domain}</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="cat-badge ${c.action==='block'?'cat-advertising':c.action==='strip'?'cat-analytics':'cat-consent'}">${c.action.toUpperCase()}</span>
+        <button class="btn-remove" onclick="removeCustom(${i})">&#x2715;</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function saveConfig() {
+  const btn = document.querySelector('.btn-save');
+  btn.textContent = 'OPSLAAN...';
+  const data = {config, custom, savedAt: new Date().toISOString(), template: _activeTemplate || 'custom'};
+  try {
+    localStorage.setItem('wall_tracker_config', JSON.stringify(data));
+  } catch(e) {}
+
+  // Toon bevestiging met samenvatting
+  setTimeout(function() {
+    const vals = Object.values(config);
+    const blocked = vals.filter(function(v){ return v === 'block'; }).length;
+    const stripped = vals.filter(function(v){ return v === 'strip'; }).length;
+    const allowed = vals.filter(function(v){ return v === 'allow'; }).length;
+    btn.textContent = '✓ OPGESLAGEN';
+    const statusEl = document.getElementById('save-status');
+    if (statusEl) statusEl.innerHTML = '&#x2713; Opgeslagen: <strong style="color:#f87171">' + blocked + ' geblokkeerd</strong> &middot; <strong style="color:#f5c400">' + stripped + ' gestript</strong> &middot; <strong style="color:#00ff9d">' + allowed + ' doorgelaten</strong> &middot; ' + custom.length + ' custom &mdash; <a href="/" style="color:#00ff9d">Terug naar registratie &#x2192;</a>';
+    setTimeout(function() { btn.textContent = 'OPSLAAN & ACTIVEREN'; }, 4000);
+  }, 400);
+}
+
+function flash(id, msg) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = msg;
+}
+
+// ── Init ──────────────────────────────────────────────────
+// Laad opgeslagen config
+try {
+  const saved = JSON.parse(localStorage.getItem('wall_tracker_config') || '{}');
+  if (saved.config) Object.assign(config, saved.config);
+  if (saved.custom) custom = saved.custom;
+} catch(e) {}
+
+render();
+renderCustom();
+</script>
+</body>
+</html>
