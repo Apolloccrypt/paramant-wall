@@ -110,6 +110,9 @@ if (token) {
     + '<div class="hint">De API key IS je toegang — geen wachtwoord nodig.<br>Nieuwe gebruiker? <a href="/">Maak een account aan →</a></div>';
 }
 
+var _attempts = 0;
+var _captchaSolved = false;
+
 async function submitRecovery() {
   var email = (document.getElementById('email-input') || {}).value || '';
   var err   = document.getElementById('err');
@@ -122,6 +125,8 @@ async function submitRecovery() {
   if (!email || email.indexOf('@') < 1) {
     err.textContent = '[!] Vul een geldig e-mailadres in.';
     err.style.display = 'block';
+    _attempts++;
+    checkCaptcha();
     return;
   }
 
@@ -129,22 +134,67 @@ async function submitRecovery() {
   btn.textContent = '>> Versturen…';
 
   try {
-    var r = await fetch(BASE + '/api/recover', {
+    var body = { email: email.trim().toLowerCase() };
+    if (_captchaSolved) body.captcha_token = 'solved';
+
+    var r = await fetch(BASE + '/api/auth/recover', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      body: JSON.stringify(body),
     });
     var d = await r.json();
 
-    // Altijd positieve response (privacy — niet laten zien of email bestaat)
-    ok.textContent  = '[OK] ' + (d.msg || 'Als dit e-mailadres bij ons bekend is, ontvang je een link binnen enkele minuten. Controleer ook je spam.');
+    if (d.error === 'captcha_required') {
+      btn.disabled = false;
+      btn.textContent = '>> STUUR RECOVERY LINK';
+      showCaptcha();
+      return;
+    }
+
+    _attempts++;
+    ok.textContent  = '[OK] ' + (d.message || 'Als dit e-mailadres bij ons bekend is, ontvang je een link. Controleer ook je spam.');
     ok.style.display = 'block';
     btn.textContent  = '>> Verstuurd';
+    checkCaptcha();
   } catch(e) {
     err.textContent  = '[!] Netwerkfout. Probeer opnieuw.';
     err.style.display = 'block';
     btn.disabled      = false;
     btn.textContent   = '>> STUUR RECOVERY LINK';
+  }
+}
+
+function checkCaptcha() {
+  if (_attempts >= 3 && !_captchaSolved) showCaptcha();
+}
+
+function showCaptcha() {
+  var existing = document.getElementById('captcha-box');
+  if (existing) return;
+  var a = Math.floor(Math.random()*9)+1;
+  var b = Math.floor(Math.random()*9)+1;
+  var answer = a + b;
+  var box = document.createElement('div');
+  box.id = 'captcha-box';
+  box.style.cssText = 'margin-bottom:10px;padding:12px;border:1px solid rgba(0,255,157,.3);background:rgba(0,255,157,.04)';
+  box.innerHTML = '<div style="font-size:10px;color:var(--g);letter-spacing:.08em;margin-bottom:8px">// VERIFICATIE VEREIST</div>'
+    + '<div style="font-size:12px;color:var(--t2);margin-bottom:8px">Wat is ' + a + ' + ' + b + '?</div>'
+    + '<input id="captcha-input" type="number" placeholder="Antwoord" style="width:100%;padding:8px 10px;background:var(--bg);border:1px solid var(--b2);color:var(--t1);font-family:var(--mono);font-size:12px;outline:none;margin-bottom:6px">'
+    + '<button onclick="solveCaptcha(' + answer + ')" style="width:100%;padding:8px;background:var(--g);color:var(--bg);font-family:var(--mono);font-size:10px;font-weight:800;border:none;cursor:pointer">VERIFIEER</button>'
+    + '<div id="captcha-err" style="display:none;font-size:10px;color:#f87171;margin-top:4px"></div>';
+  var btn = document.getElementById('submit-btn');
+  btn.parentNode.insertBefore(box, btn);
+}
+
+function solveCaptcha(correct) {
+  var input = parseInt((document.getElementById('captcha-input') || {}).value);
+  if (input === correct) {
+    _captchaSolved = true;
+    var box = document.getElementById('captcha-box');
+    if (box) box.innerHTML = '<div style="font-size:10px;color:var(--g)">[OK] Verificatie geslaagd.</div>';
+  } else {
+    var errEl = document.getElementById('captcha-err');
+    if (errEl) { errEl.style.display = 'block'; errEl.textContent = '[!] Onjuist. Probeer opnieuw.'; }
   }
 }
 

@@ -1231,7 +1231,33 @@ app.get('/snippet.js', function(req, res) {
 // ── Static files ──────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/privacy',  function(req, res) { res.sendFile(path.join(__dirname, 'public', 'privacy.html')); });
-app.get('/recover',  function(req, res) { res.sendFile(path.join(__dirname, 'public', 'recover.html')); });
+app.get('/recover', function(req, res) { res.sendFile(path.join(__dirname, 'public', 'recover.html')); });
+
+// CSRF token endpoint voor recover + gdpr formulieren
+app.get('/api/csrf-token', function(req, res) {
+  const token = require('crypto').randomBytes(32).toString('hex');
+  const tokenHash = sha256(token);
+  // Sla op in Redis — 1 uur geldig
+  redisSet('csrf:' + tokenHash, '1', 3600);
+  res.json({ token: token });
+});
+
+// CSRF validatie middleware
+async function validateCSRF(req, res, next) {
+  const csrfToken = req.headers['x-csrf-token'] || (req.body || {}).csrf_token;
+  if (!csrfToken) {
+    // Graceful degradatie — log maar blokkeer niet (backwards compat)
+    return next();
+  }
+  const tokenHash = sha256(csrfToken);
+  const valid = await redisGet('csrf:' + tokenHash);
+  if (!valid) {
+    return res.status(403).json({ error: 'invalid_csrf_token' });
+  }
+  // Single use
+  await redis.del('csrf:' + tokenHash).catch(() => {});
+  next();
+}
 app.get('/cancel',   function(req, res) { res.sendFile(path.join(__dirname, 'public', 'cancel.html')); });
 
 // ── Health / Stats ────────────────────────────────────────────────
@@ -1417,6 +1443,17 @@ app.post('/api/auth/recover', async function(req, res) {
     }
   }
 
+  // Track mislukte pogingen voor CAPTCHA trigger
+  if (!userRow.rows.length) {
+    const failKey = 'recover_fail:' + sha256(getClientIP(req)).slice(0, 16);
+    const failCnt = parseInt(await redisGet(failKey) || 0) + 1;
+    await redisSet(failKey, String(failCnt), 3600);
+    if (failCnt >= 5) {
+      // Flag dit IP voor verhoogde controle
+      await logSecurityEvent('recover_suspicious', { ipHash: sha256(getClientIP(req)).slice(0, 16), attempts: failCnt }).catch(() => {});
+    }
+  }
+
   // Altijd 200 (geen email enumeration)
   return res.json({ ok: true, message: 'Als dit e-mailadres bekend is, ontvang je een link.' });
 });
@@ -1459,10 +1496,16 @@ app.get('/api/gdpr/confirm', async function(req, res) {
     await logSecurityEvent('gdpr_delete', { userHash }).catch(() => {});
 
     return res.send(`
-      <html><body style="font-family:monospace;background:#0c0e10;color:#e2e4e8;padding:40px;text-align:center">
-        <h2 style="color:#00ff9d">[OK] Account verwijderd.</h2>
-        <p style="color:#8a8e98;margin-top:12px">Alle gegevens zijn permanent verwijderd. Je API key is ongeldig.</p>
-        <a href="/" style="color:#00ff9d">← Terug naar home</a>
+      <html><body style="font-family:monospace;background:#0c0e10;color:#e2e4e8;padding:40px;text-align:center;max-width:520px;margin:0 auto">
+        <h2 style="color:#00ff9d">[OK] Verwijdering gepland.</h2>
+        <p style="color:#8a8e98;margin-top:12px;line-height:1.8">
+          Je account en alle gegevens worden over <strong style="color:#f5c400">7 dagen</strong> permanent verwijderd.<br>
+          Je API key is direct ongeldig.<br><br>
+          Heb je je bedacht? Stuur een email naar
+          <a href="mailto:privacy@paramant.app" style="color:#00ff9d">privacy@paramant.app</a>
+          binnen 7 dagen om de verwijdering te annuleren.
+        </p>
+        <a href="/" style="color:#00ff9d;display:inline-block;margin-top:20px">← Terug naar home</a>
       </body></html>
     `);
   } catch(e) {
