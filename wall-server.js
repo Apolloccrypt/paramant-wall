@@ -39,6 +39,7 @@ const Redis    = require('redis');
 const { Pool } = require('pg');
 
 const { BUILT_IN_TRACKERS, TEMPLATES, TRACKER_CATEGORIES, getTrackerAction } = require('./trackers');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || '');
 const app = express();
 app.disable('x-powered-by');
 app.disable('etag');
@@ -561,7 +562,6 @@ app.get('/success', async function(req, res) {
 
   if (!userData && sessionId) {
     try {
-      const stripe  = require('stripe')(process.env.STRIPE_SECRET_KEY);
       const session = await stripe.checkout.sessions.retrieve(stripeSessionId);
       if (session.customer_email || (session.metadata && session.metadata.email)) {
         const email = session.customer_email || session.metadata.email;
@@ -621,7 +621,6 @@ app.get('/api/success-data', async function(req, res) {
 
   if (sessionId) {
     try {
-      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
       const session = await stripe.checkout.sessions.retrieve(stripeSessionId);
       
       // Check of betaling gelukt is
