@@ -13,7 +13,7 @@ const crypto  = require('crypto');
 const path    = require('path');
 
 const PORT    = parseInt(process.env.PORT) || 4000;
-const VERSION = '3.1.0';
+const VERSION = '3.3.0';
 const BASE    = process.env.WALL_BASE_URL || 'https://wall.paramant.app';
 const IS_PROD = process.env.NODE_ENV === 'production';
 
@@ -68,6 +68,25 @@ async function deleteFeedData(feedHash) {
   await redis.del('feed:events:' + feedHash).catch(function() {});
   await redis.del('feed:stats:' + feedHash).catch(function() {});
 }
+
+
+// Pending accounts cleanup: verwijder records ouder dan 2 uur die niet betaald zijn
+async function cleanPendingAccounts() {
+  try {
+    const r = await pg.query(
+      "DELETE FROM pending_accounts WHERE created_at < NOW() - INTERVAL '2 hours' AND (payment_processed IS NULL OR payment_processed=false) RETURNING email"
+    );
+    if (r.rows.length > 0) {
+      console.log('[WALL] pending_cleanup: verwijderd', r.rows.length, 'verlopen pending accounts');
+    }
+  } catch(e) {
+    console.error('[WALL] pending_cleanup error:', e.code || e.message.slice(0,40));
+  }
+}
+// Run elke 15 minuten
+setInterval(cleanPendingAccounts, 15 * 60 * 1000);
+// Ook direct bij startup
+setTimeout(cleanPendingAccounts, 10000);
 
 // Cleanup job elke 5 minuten
 setInterval(async function() {
@@ -208,6 +227,29 @@ ensureTables();
 
 // ── Core registratie functie (ook gebruikt door webhook) ──────────
 async function activateAccount({ email, plan, domain, stripeCustomerId, stripeSubId, wasReplaced }) {
+  // IDEMPOTENCY: voorkom dubbele activatie
+  try {
+    const existing = await pg.query(
+      'SELECT id, enabled FROM customers WHERE user_id IN (SELECT id FROM users WHERE email=$1) AND enabled=true LIMIT 1',
+      [email]
+    );
+    if (existing.rows.length > 0) {
+      console.log('[WALL] activateAccount: al actief voor', email, '- skip');
+    await logSecurityEvent('key_activated', {reason:'duplicate_skipped'});
+      return { ok: true, skipped: true };
+    }
+    const pend = await pg.query(
+      'SELECT payment_processed FROM pending_accounts WHERE email=$1 LIMIT 1', [email]
+    );
+    if (pend.rows.length > 0 && pend.rows[0].payment_processed) {
+      console.log('[WALL] activateAccount: al processed voor', email, '- skip');
+      return { ok: true, skipped: true };
+    }
+    await pg.query(
+      'UPDATE pending_accounts SET payment_processed=true, processed_at=NOW() WHERE email=$1', [email]
+    ).catch(function(){});
+  } catch(e) {}
+
   const client = await pg.connect();
   try {
     await client.query('BEGIN');
@@ -250,7 +292,7 @@ async function activateAccount({ email, plan, domain, stripeCustomerId, stripeSu
     await client.query(
       'INSERT INTO projects (id, customer_id_ref, name, feed_hash, created_at, allowed_domains) VALUES ($1, $2, $3, $4, NOW(), $5)',
       [projectId, customerId, 'Mijn eerste site', feedHash,
-       domain ? '{' + domain.replace(/^https?:\/\//, '').replace(/\/.*/, '').replace(/^www\./, '').split(',').map(d=>d.trim()).filter(Boolean).join(',') + '}' : '{}']
+       domain ? JSON.stringify([domain.replace(/^https?:\/\//, '').replace(/\/.*/, '').replace(/^www\./, '')]) : '{}']
     );
 
     // 4. Wall config
@@ -267,8 +309,8 @@ async function activateAccount({ email, plan, domain, stripeCustomerId, stripeSu
     const subStatus = plan === 'test' ? 'trialing' : 'active';
     const periodEnd = plan === 'test' ? "NOW() + INTERVAL '10 minutes'" : 'NULL';
     await client.query(
-      `INSERT INTO subscriptions (id, customer_id_ref, plan, status, stripe_sub_id)
-       VALUES (gen_random_uuid(), $1, $2, $3, $4)`,
+      `INSERT INTO subscriptions (id, customer_id_ref, plan, status, stripe_sub_id, period_start, period_end)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW(), ${periodEnd})`,
       [customerId, plan, subStatus, stripeSubId || null]
     );
     // Test key: plan automatisch deactiveren na 1 uur
@@ -306,7 +348,8 @@ app.post('/api/auth/register', async function(req, res) {
   const aip  = anonymizeIP(ip);
 
   if (!await rateLimit('reg:' + aip, 5, 3600)) {
-    return res.status(429).json({ error: 'rate_limit', msg: 'Te veel pogingen. Probeer later.' });
+    logSecurityEvent('rate_limit_hit', {}).catch(function(){});
+  return res.status(429).json({ error: 'rate_limit', msg: 'Te veel pogingen. Probeer later.' });
   }
 
   const email = validateEmail(req.body && req.body.email);
@@ -507,7 +550,7 @@ app.get('/success', async function(req, res) {
   if (!userData && sessionId) {
     try {
       const stripe  = require('stripe')(process.env.STRIPE_SECRET_KEY);
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      const session = await stripe.checkout.sessions.retrieve(stripeSessionId);
       if (session.customer_email || (session.metadata && session.metadata.email)) {
         const email = session.customer_email || session.metadata.email;
         // Wacht even op webhook
@@ -528,9 +571,24 @@ app.get('/success', async function(req, res) {
 
 // API voor success pagina data
 app.get('/api/success-data', async function(req, res) {
+  // Stripe sessie verificatie als session_id aanwezig
+  const stripeSessionId = req.query.session_id;
+  if (stripeSessionId && stripe) {
+    try {
+      const session = await stripe.checkout.sessions.retrieve(stripeSessionId);
+      if (session.payment_status !== 'paid' && session.status !== 'complete') {
+        return res.status(402).json({ error: 'payment_not_completed', status: session.payment_status });
+      }
+    } catch(e) {
+      console.error('[WALL] Stripe session verify error:', e.message.slice(0,50));
+      // Niet blokkeren bij Stripe API fout - ga door met DB check
+    }
+  }
+
   const ip = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
   if (!await rateLimit('succ:' + anonymizeIP(ip), 30, 60)) {
-    return res.status(429).json({ error: 'rate_limit' });
+    logSecurityEvent('rate_limit_hit', {}).catch(function(){});
+  return res.status(429).json({ error: 'rate_limit' });
   }
   const sessionId = req.query.s;
   const viewToken = req.query.view;
@@ -552,7 +610,7 @@ app.get('/api/success-data', async function(req, res) {
   if (sessionId) {
     try {
       const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      const session = await stripe.checkout.sessions.retrieve(stripeSessionId);
       
       // Check of betaling gelukt is
       if (session.status === 'expired') {
@@ -627,7 +685,8 @@ app.post('/api/auth/login', async function(req, res) {
 
   const ip = req.headers['x-real-ip'] || req.socket.remoteAddress || '';
   if (!await rateLimit('login:' + anonymizeIP(ip), 5, 900)) {
-    return res.status(429).json({ error: 'rate_limit' });
+    logSecurityEvent('rate_limit_hit', {}).catch(function(){});
+  return res.status(429).json({ error: 'rate_limit' });
   }
 
   const r = await pg.query(
@@ -654,40 +713,69 @@ app.post('/api/auth/login', async function(req, res) {
 // PUBLIC FEED API
 // ══════════════════════════════════════════════════════════════════
 app.get('/api/feed/:hash', async function(req, res) {
-  const hash = (req.params.hash || '').replace(/[^a-f0-9]/gi, '').slice(0, 16);
-  if (hash.length < 8) return res.status(400).json({ error: 'invalid_hash' });
-
+  const { hash } = req.params;
+  if (!hash || !/^[a-f0-9]{16}$/.test(hash)) return res.status(400).json({ error: 'invalid_hash' });
   try {
-    const r = await pg.query(
-      'SELECT p.customer_id_ref, p.name FROM projects p WHERE p.feed_hash = $1 LIMIT 1',
-      [hash]
+    const proj = await pg.query(
+      'SELECT p.customer_id_ref, p.name, p.id FROM projects p WHERE p.feed_hash = $1 LIMIT 1', [hash]
     );
-    if (!r.rows.length) return res.status(404).json({ error: 'not_found' });
+    if (!proj.rows.length) return res.status(404).json({ error: 'feed_not_found' });
+    const customerId = proj.rows[0].customer_id_ref;
 
+    // Maandtotalen
     const month = new Date().toISOString().slice(0, 7);
-    const s = await pg.query(
-      'SELECT * FROM usage_monthly WHERE customer_id = $1 AND month = $2',
-      [r.rows[0].customer_id_ref, month]
+    const stats = await pg.query(
+      'SELECT requests, blocked, stripped, allowed FROM usage_monthly WHERE customer_id=$1 AND month=$2',
+      [customerId, month]
     );
-    const d = s.rows[0] || {};
+    const d = stats.rows[0] || { requests: 0, blocked: 0, stripped: 0, allowed: 0 };
 
-    res.json({
-      ok:           true,
-      feed_hash:    hash,
-      project_name: r.rows[0].name,
-      month:        month,
-      totals: {
-        requests: +(d.requests || 0),
-        blocked:  +(d.blocked  || 0),
-        stripped: +(d.stripped || 0),
-        allowed:  +(d.allowed  || 0),
-      },
-      note: 'Geen persoonsgegevens. Alleen geaggregeerde maandelijkse statistieken.',
+    // Live events uit Redis (laatste 100, max 10 min)
+    const eventsRaw = await redis.lRange('feed:events:' + hash, 0, 99).catch(function(){ return []; });
+    const events = eventsRaw.map(function(e) {
+      try { return JSON.parse(e); } catch(x) { return null; }
+    }).filter(Boolean).sort(function(a, b) { return b.ts - a.ts; });
+
+    // Tracker breakdown: tel per tracker naam
+    const breakdown = {};
+    events.forEach(function(e) {
+      var tk = e.tracker || 'unknown';
+      if (!breakdown[tk]) breakdown[tk] = { blocked: 0, stripped: 0, allowed: 0 };
+      if (e.action === 'block' || e.action === 'blocked') breakdown[tk].blocked++;
+      else if (e.action === 'strip' || e.action === 'stripped') breakdown[tk].stripped++;
+      else breakdown[tk].allowed++;
+    });
+
+    // Percentages
+    const total = parseInt(d.requests) || 0;
+    const pct = function(n) { return total > 0 ? Math.round((parseInt(n)||0) / total * 100) : 0; };
+
+    return res.json({
+      ok: true,
+      feed: {
+        hash: hash,
+        name: proj.rows[0].name || 'Wall Feed',
+        month: month,
+        totals: {
+          requests: total,
+          blocked:  parseInt(d.blocked)  || 0,
+          stripped: parseInt(d.stripped) || 0,
+          allowed:  parseInt(d.allowed)  || 0,
+          pct_blocked:  pct(d.blocked),
+          pct_stripped: pct(d.stripped),
+          pct_allowed:  pct(d.allowed),
+        },
+        breakdown: breakdown,
+        live_events: events.slice(0, 20),
+        generated_at: new Date().toISOString(),
+      }
     });
   } catch(e) {
-    res.status(500).json({ error: 'feed_error' });
+    console.error('[WALL] feed error:', e.code || e.message.slice(0,40));
+    return res.status(500).json({ error: 'feed_error' });
   }
 });
+
 
 app.get('/feed/:hash', function(req, res) {
   res.sendFile(path.join(__dirname, 'public', 'feed.html'));
@@ -715,10 +803,133 @@ async function getCustomer(apiKey) {
   } catch { return null; }
 }
 
+
+async function revokeKey(apiKey, reason) {
+  if (!apiKey) return;
+  const keyHash = sha256(apiKey).slice(0,16);
+  const cacheKey = 'wk:' + sha256(apiKey);
+  // Redis: markeer als revoked (24 uur cache)
+  await redis.setEx('revoked:' + keyHash, 86400, reason || 'revoked').catch(function(){});
+  // Verwijder customer cache
+  await redis.del(cacheKey).catch(function(){});
+  // DB: disable customer
+  await pg.query('UPDATE customers SET enabled=false WHERE api_key=$1', [apiKey]).catch(function(){});
+  console.log('[WALL] Key revoked:', keyHash, 'reden:', reason || 'unknown');
+  await logSecurityEvent('key_revoked', {keyHint: keyHash, reason: reason||'unknown'});
+  // Stuur "Was jij dit?" email
+  try {
+    const userRow = await pg.query(
+      'SELECT u.email FROM users u JOIN customers c ON c.user_id=u.id WHERE c.api_key=$1 LIMIT 1',
+      [apiKey]
+    );
+    if (userRow.rows.length > 0) {
+      await sendKeyInvalidationEmail(userRow.rows[0].email, reason || 'key_revoked', null);
+    }
+  } catch(e) {}
+}
+
+// ── Email helpers ─────────────────────────────────────────────────────────
+
+// ── Security event logger (geen PII) ─────────────────────────────────────
+async function logSecurityEvent(eventType, meta) {
+  const allowed = ['key_activated','key_revoked','rate_limit_hit','domain_blocked',
+                   'invalid_key_attempt','gdpr_delete','webhook_received','pending_cleanup'];
+  if (allowed.indexOf(eventType) < 0) return;
+  try {
+    await pg.query(
+      'INSERT INTO system_events (id, event_type, meta, created_at) VALUES (gen_random_uuid(), $1, $2, NOW())',
+      [eventType, JSON.stringify(meta || {})]
+    );
+  } catch(e) { /* non-blocking */ }
+}
+
+async function sendEmail(to, subject, html) {
+  // Gebruik SMTP als geconfigureerd, anders alleen log
+  const SMTP_HOST = process.env.SMTP_HOST;
+  const SMTP_USER = process.env.SMTP_USER;
+  const SMTP_PASS = process.env.SMTP_PASS;
+  if (!SMTP_HOST) {
+    console.log('[WALL] EMAIL (no SMTP):', subject, '->', to.slice(0,4)+'***');
+    return false;
+  }
+  try {
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST, port: parseInt(process.env.SMTP_PORT||'587'),
+      secure: false,
+      auth: { user: SMTP_USER, pass: SMTP_PASS }
+    });
+    await transporter.sendMail({
+      from: '"PARAMANT WALL" <noreply@paramant.app>',
+      to, subject, html
+    });
+    return true;
+  } catch(e) {
+    console.error('[WALL] Email error:', e.message.slice(0,60));
+    return false;
+  }
+}
+
+async function sendKeyInvalidationEmail(email, reason, newKeyHint) {
+  const subject = 'PARAMANT WALL — Was jij dit? Je API key is veranderd';
+  const html = `
+<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="background:#0c0e10;color:#e2e4e8;font-family:monospace;padding:40px;max-width:540px;margin:0 auto">
+  <div style="border:1px solid #1e2026;padding:32px">
+    <div style="font-size:18px;font-weight:800;color:#00ff9d;margin-bottom:4px">PARAMANT WALL</div>
+    <div style="font-size:11px;color:#5a6070;margin-bottom:24px;border-bottom:1px solid #1e2026;padding-bottom:16px">Beveiligingsmelding</div>
+    <div style="font-size:13px;font-weight:700;color:#f5c400;margin-bottom:16px">⚠ Je API key is geïnvalideerd</div>
+    <p style="font-size:11px;color:#8a8e98;line-height:1.8;margin-bottom:16px">
+      Je PARAMANT WALL API key is zojuist gedeactiveerd.<br>
+      <strong style="color:#e2e4e8">Reden:</strong> ${reason || 'Beveiligingsbeleid'}
+    </p>
+    <p style="font-size:11px;color:#8a8e98;line-height:1.8;margin-bottom:24px">
+      Als jij dit was: je kunt een nieuwe key aanvragen via de recovery flow.<br>
+      <strong style="color:#f87171">Was jij dit niet?</strong> Neem direct contact op via privacy@paramant.app
+    </p>
+    <a href="https://wall.paramant.app/recover" style="display:inline-block;padding:10px 20px;background:#00ff9d;color:#0c0e10;font-weight:800;font-size:11px;text-decoration:none;letter-spacing:.06em">→ KEY RECOVERY STARTEN</a>
+    <p style="font-size:9px;color:#3d4149;margin-top:24px;border-top:1px solid #1e2026;padding-top:16px">
+      PARAMANT · privacy@paramant.app · wall.paramant.app<br>
+      Dit is een automatische beveiligingsmelding. Geen PII opgeslagen.
+    </p>
+  </div>
+</body></html>`;
+  return sendEmail(email, subject, html);
+}
+
+async function sendMagicLinkEmail(email, token) {
+  const link = 'https://wall.paramant.app/recover?token=' + token;
+  const subject = 'PARAMANT WALL — Je API key recovery link';
+  const html = `
+<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="background:#0c0e10;color:#e2e4e8;font-family:monospace;padding:40px;max-width:540px;margin:0 auto">
+  <div style="border:1px solid #1e2026;padding:32px">
+    <div style="font-size:18px;font-weight:800;color:#00ff9d;margin-bottom:4px">PARAMANT WALL</div>
+    <div style="font-size:11px;color:#5a6070;margin-bottom:24px;border-bottom:1px solid #1e2026;padding-bottom:16px">Key Recovery</div>
+    <p style="font-size:12px;color:#8a8e98;line-height:1.8;margin-bottom:24px">
+      Klik op de knop hieronder om je API key op te halen.<br>
+      <strong style="color:#f5c400">Deze link is 15 minuten geldig en kan slechts éénmaal gebruikt worden.</strong>
+    </p>
+    <a href="${link}" style="display:inline-block;padding:12px 24px;background:#00ff9d;color:#0c0e10;font-weight:800;font-size:11px;text-decoration:none;letter-spacing:.06em">→ OPEN KEY RECOVERY</a>
+    <p style="font-size:9px;color:#3d4149;margin-top:24px;border-top:1px solid #1e2026;padding-top:16px">
+      Niet aangevraagd? Negeer dit bericht veilig.<br>
+      PARAMANT · privacy@paramant.app
+    </p>
+  </div>
+</body></html>`;
+  return sendEmail(email, subject, html);
+}
+
 async function requireCustomer(req, res, next) {
   const apiKey = (req.headers['x-wall-key'] || req.headers['x-api-key'] || req.query._wk || req.query.k || '').trim();
   const customer = await getCustomer(apiKey);
   if (!customer) return res.status(401).json({ error: 'invalid_key' });
+  // Check revoked_keys tabel (harde invalidatie)
+  try {
+    const revokedKey = 'revoked:' + sha256(apiKey).slice(0,16);
+    const isRevoked = await redis.get(revokedKey).catch(function(){ return null; });
+    if (isRevoked) return res.status(401).json({ error: 'key_revoked' });
+  } catch(e) {}
   // Domain lock: Origin + Referer check
   const _doms = Array.isArray(customer.allowed_domains) ? customer.allowed_domains.filter(function(x){ return x && x.length > 0; }) : [];
   if (_doms.length > 0) {
@@ -731,7 +942,8 @@ async function requireCustomer(req, res, next) {
       return _reqDom === _d || _reqDom.endsWith('.' + _d);
     });
     if (!_domOk) {
-      return res.status(403).json({ error: 'domain_not_allowed', domain: _reqDom, allowed: _doms });
+      logSecurityEvent('domain_blocked', {}).catch(function(){});
+    return res.status(403).json({ error: 'domain_not_allowed', domain: _reqDom, allowed: _doms });
     }
   }
   req.customer = customer;
@@ -840,11 +1052,14 @@ app.all('/proxy/meta', requireCustomer, async function(req, res) {
 });
 
 // ── Snippet serveren ──────────────────────────────────────────────
-app.get('/snippet.js', requireCustomer, function(req, res) {
+app.get('/snippet.js', function(req, res) {
+  // Snippet mag geserveerd worden zonder auth - key zit in de JS zelf
   res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=3600');
-  res.sendFile(path.join(__dirname, 'public', 'snippet.js'));
+  res.setHeader('Cache-Control', 'public, max-age=300'); // 5 min cache
+  res.setHeader('Access-Control-Allow-Origin', '*'); // Snippet moet van elke site geladen worden
+  res.sendFile(require('path').join(__dirname, 'public', 'snippet.js'));
 });
+
 
 // ── Static files ──────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
@@ -872,7 +1087,8 @@ app.post('/api/gdpr/delete', async function(req, res) {
   const gdprIp = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
   const gdprKey = 'gdpr_rl:' + require('crypto').createHash('sha256').update(gdprIp).digest('hex').slice(0,16);
   const gdprCount = parseInt(await redis.get(gdprKey).catch(function(){ return 0; })) || 0;
-  if (gdprCount >= 3) return res.status(429).json({ error: 'rate_limit', retry_after: 3600 });
+  if (gdprCount >= 3) logSecurityEvent('rate_limit_hit', {}).catch(function(){});
+  return res.status(429).json({ error: 'rate_limit', retry_after: 3600 });
   await redis.setEx(gdprKey, 3600, String(gdprCount + 1)).catch(function(){});
   const { email, apiKey } = req.body || {};
   if (!email && !apiKey) return res.status(400).json({ error: 'email_or_key_required' });
@@ -904,6 +1120,59 @@ app.post('/api/gdpr/delete', async function(req, res) {
     console.error('[WALL] GDPR delete error:', e.code || e.message.slice(0, 50));
     return res.status(500).json({ error: 'delete_failed' });
   }
+});
+
+app.all('/proxy/generic', requireCustomer, async function(req, res) {
+  const { customer } = req;
+  const origUrl = req.query._orig || req.headers['x-wall-original'] || '';
+  if (!origUrl) return res.json({ ok: true, action: 'dropped', reason: 'no_original_url' });
+
+  // Check tracker config voor dit domein
+  const ip = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || '';
+  const ipHash = sha256(ip + new Date().toISOString().slice(0,10) + (process.env.IP_SALT||'wall')).slice(0,16);
+
+  // Strip PII uit query string
+  let cleanUrl = origUrl;
+  const piiParams = ['client_id','user_id','_ga','_gid','_fbc','_fbp','uid','email','phone'];
+  try {
+    const u = new URL(origUrl);
+    piiParams.forEach(function(p) { u.searchParams.delete(p); });
+    cleanUrl = u.toString();
+  } catch(e) {}
+
+  // Haal tracker actie op via config
+  let action = 'block'; // default: block voor generieke trackers
+  try {
+    const cfgRow = await pg.query(
+      'SELECT config_json FROM wall_configs WHERE customer_id=$1 LIMIT 1', [customer.id]
+    );
+    if (cfgRow.rows.length > 0) {
+      const cfg = JSON.parse(cfgRow.rows[0].config_json || '{}');
+      // Zoek matching tracker in config
+      // (simplified - full matching in trackers.js)
+      action = cfg.default_action || 'block';
+    }
+  } catch(e) {}
+
+  await incStats(customer.id, action === 'block' ? 'blocked' : action === 'strip' ? 'strip' : 'allow');
+
+  if (action === 'block') {
+    return res.status(200).json({ ok: true, action: 'blocked', url: origUrl.slice(0,50) });
+  }
+
+  if (action === 'allow' || action === 'strip') {
+    try {
+      const result = await proxyRequest(cleanUrl, req.method, {
+        'content-type': req.headers['content-type'] || 'application/json',
+        'user-agent': 'PARAMANT-WALL/3.2.0',
+      }, req.body ? JSON.stringify(req.body) : undefined);
+      return res.status(result.status).send(result.body);
+    } catch(e) {
+      return res.json({ ok: true, action: 'forwarded_error' });
+    }
+  }
+
+  return res.json({ ok: true, action: 'processed' });
 });
 
 app.get('/health', function(req, res) {
