@@ -717,45 +717,40 @@ app.get('/api/feed/:hash', async function(req, res) {
   if (!hash || !/^[a-f0-9]{16}$/.test(hash)) return res.status(400).json({ error: 'invalid_hash' });
   try {
     const proj = await pg.query(
-      'SELECT p.customer_id_ref, p.name, p.id FROM projects p WHERE p.feed_hash = $1 LIMIT 1', [hash]
+      'SELECT p.customer_id_ref, p.name FROM projects p WHERE p.feed_hash=$1 LIMIT 1', [hash]
     );
-    if (!proj.rows.length) return res.status(404).json({ error: 'feed_not_found' });
-    const customerId = proj.rows[0].customer_id_ref;
-
-    // Maandtotalen
+    if (!proj.rows.length) return res.status(404).json({ error: 'not_found' });
+    const cid   = proj.rows[0].customer_id_ref;
     const month = new Date().toISOString().slice(0, 7);
-    const stats = await pg.query(
+
+    const totals = await pg.query(
       'SELECT requests, blocked, stripped, allowed FROM usage_monthly WHERE customer_id=$1 AND month=$2',
-      [customerId, month]
+      [cid, month]
     );
-    const d = stats.rows[0] || { requests: 0, blocked: 0, stripped: 0, allowed: 0 };
-
-    // Live events uit Redis (laatste 100, max 10 min)
-    const eventsRaw = await redis.lRange('feed:events:' + hash, 0, 99).catch(function(){ return []; });
-    const events = eventsRaw.map(function(e) {
-      try { return JSON.parse(e); } catch(x) { return null; }
-    }).filter(Boolean).sort(function(a, b) { return b.ts - a.ts; });
-
-    // Tracker breakdown: tel per tracker naam
-    const breakdown = {};
-    events.forEach(function(e) {
-      var tk = e.tracker || 'unknown';
-      if (!breakdown[tk]) breakdown[tk] = { blocked: 0, stripped: 0, allowed: 0 };
-      if (e.action === 'block' || e.action === 'blocked') breakdown[tk].blocked++;
-      else if (e.action === 'strip' || e.action === 'stripped') breakdown[tk].stripped++;
-      else breakdown[tk].allowed++;
-    });
-
-    // Percentages
+    const d = totals.rows[0] || { requests:0, blocked:0, stripped:0, allowed:0 };
     const total = parseInt(d.requests) || 0;
-    const pct = function(n) { return total > 0 ? Math.round((parseInt(n)||0) / total * 100) : 0; };
+    const pct   = function(n){ return total > 0 ? Math.round((parseInt(n)||0)/total*100) : 0; };
+
+    // Live events + breakdown per tracker
+    const raw = await redis.lRange('feed:events:' + hash, 0, 99).catch(function(){ return []; });
+    const events = raw.map(function(e){ try{ return JSON.parse(e); }catch(x){ return null; } })
+                      .filter(Boolean).sort(function(a,b){ return b.ts - a.ts; });
+
+    const breakdown = {};
+    events.forEach(function(ev) {
+      var tk = ev.tracker || 'unknown';
+      if (!breakdown[tk]) breakdown[tk] = { blocked:0, stripped:0, allowed:0 };
+      var a = ev.action || 'allowed';
+      if (a === 'block'   || a === 'blocked')  breakdown[tk].blocked++;
+      else if (a === 'strip' || a === 'stripped') breakdown[tk].stripped++;
+      else                                        breakdown[tk].allowed++;
+    });
 
     return res.json({
       ok: true,
       feed: {
-        hash: hash,
-        name: proj.rows[0].name || 'Wall Feed',
-        month: month,
+        hash, month,
+        name:    proj.rows[0].name || 'PARAMANT WALL Feed',
         totals: {
           requests: total,
           blocked:  parseInt(d.blocked)  || 0,
@@ -767,7 +762,7 @@ app.get('/api/feed/:hash', async function(req, res) {
         },
         breakdown: breakdown,
         live_events: events.slice(0, 20),
-        generated_at: new Date().toISOString(),
+        ts: new Date().toISOString(),
       }
     });
   } catch(e) {
@@ -775,7 +770,6 @@ app.get('/api/feed/:hash', async function(req, res) {
     return res.status(500).json({ error: 'feed_error' });
   }
 });
-
 
 app.get('/feed/:hash', function(req, res) {
   res.sendFile(path.join(__dirname, 'public', 'feed.html'));
@@ -815,6 +809,11 @@ async function revokeKey(apiKey, reason) {
   // DB: disable customer
   await pg.query('UPDATE customers SET enabled=false WHERE api_key=$1', [apiKey]).catch(function(){});
   console.log('[WALL] Key revoked:', keyHash, 'reden:', reason || 'unknown');
+  // Was jij dit? email
+  pg.query('SELECT u.email FROM users u JOIN customers c ON c.user_id=u.id WHERE c.api_key=$1 LIMIT 1', [apiKey])
+    .then(function(r){ if(r.rows.length) sendKeyInvalidationEmail(r.rows[0].email, reason||'key_revoked'); })
+    .catch(function(){});
+  await logSecurityEvent('key_revoked', { keyHint: keyHash, reason: reason||'unknown' }).catch(function(){});
   await logSecurityEvent('key_revoked', {keyHint: keyHash, reason: reason||'unknown'});
   // Stuur "Was jij dit?" email
   try {
