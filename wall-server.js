@@ -1088,7 +1088,7 @@ app.all('/proxy/meta', requireCustomer, async function(req, res) {
 app.get('/snippet.js', function(req, res) {
   // Snippet mag geserveerd worden zonder auth - key zit in de JS zelf
   res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=300'); // 5 min cache
+  res.setHeader('Cache-Control', 'public, max-age=7200, s-maxage=7200'); // 2 uur — consistent met Cloudflare Page Rule
   res.setHeader('Access-Control-Allow-Origin', '*'); // Snippet moet van elke site geladen worden
   res.sendFile(require('path').join(__dirname, 'public', 'snippet.js'));
 });
