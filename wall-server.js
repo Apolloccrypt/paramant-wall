@@ -38,6 +38,7 @@ const express  = require('express');
 const Redis    = require('redis');
 const { Pool } = require('pg');
 
+const { BUILT_IN_TRACKERS, TEMPLATES, TRACKER_CATEGORIES, getTrackerAction } = require('./trackers');
 const app = express();
 app.disable('x-powered-by');
 app.disable('etag');
@@ -815,6 +816,20 @@ app.get('/recover',  function(req, res) { res.sendFile(path.join(__dirname, 'pub
 app.get('/cancel',   function(req, res) { res.sendFile(path.join(__dirname, 'public', 'cancel.html')); });
 
 // ── Health / Stats ────────────────────────────────────────────────
+app.get('/api/trackers', function(req, res) {
+  // Geeft de volledige tracker database + templates terug
+  res.json({
+    ok: true,
+    trackers: BUILT_IN_TRACKERS,
+    templates: Object.entries(TEMPLATES).map(([key, t]) => ({
+      key,
+      label: t.label,
+      description: t.description,
+    })),
+    categories: TRACKER_CATEGORIES,
+  });
+});
+
 app.get('/health', function(req, res) {
   res.json({ ok: true, version: VERSION, ts: new Date().toISOString() });
 });
