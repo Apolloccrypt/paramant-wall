@@ -125,6 +125,27 @@ h1{font-size:15px;font-weight:800;color:var(--t1);margin-bottom:4px}
   </div>
 </main>
 
+<div style="max-width:900px;margin:0 auto;padding:24px 24px 0">
+  <div style="border:1px solid rgba(239,68,68,.2);background:rgba(239,68,68,.03);padding:20px">
+    <div style="font-size:10px;color:#f87171;letter-spacing:.1em;margin-bottom:12px">// ACCOUNT</div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:4px">Key vergeten?</div>
+        <div style="font-size:11px;color:var(--t4)">Vraag een recovery link aan via e-mail.</div>
+      </div>
+      <a href="/recover" style="padding:8px 16px;border:1px solid var(--b2);color:var(--t3);font-family:var(--mono);font-size:10px;text-decoration:none;letter-spacing:.05em;transition:all .15s" onmouseover="this.style.borderColor='var(--g)';this.style.color='var(--g)'" onmouseout="this.style.borderColor='var(--b2)';this.style.color='var(--t3)'">&#x1F511; KEY RECOVERY</a>
+    </div>
+    <div style="border-top:1px solid rgba(239,68,68,.15);margin:16px 0"></div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#f87171;margin-bottom:4px">Account verwijderen</div>
+        <div style="font-size:11px;color:var(--t4)">Verwijdert alle data permanent. Kan niet ongedaan gemaakt worden.</div>
+      </div>
+      <button onclick="requestDelete()" style="padding:8px 16px;border:1px solid rgba(239,68,68,.4);color:#f87171;background:transparent;font-family:var(--mono);font-size:10px;cursor:pointer;letter-spacing:.05em;transition:all .15s" onmouseover="this.style.background='rgba(239,68,68,.08)'" onmouseout="this.style.background='transparent'">&#x26A0; ACCOUNT VERWIJDEREN</button>
+    </div>
+  </div>
+</div>
+
 <div class="save-bar">
   <span class="save-txt" id="save-status">Sla je configuratie op en ga verder naar je account aanmaken.</span>
   <div class="save-btns">
@@ -346,6 +367,22 @@ function saveAndGo() {
 
 // Init render
 render();
+
+function requestDelete() {
+  var email = prompt('Voer je e-mailadres in om een verwijderverzoek te starten:');
+  if (!email || email.indexOf('@') < 1) return;
+  if (!confirm('Weet je zeker dat je een verwijderverzoek wilt starten voor ' + email + '?')) return;
+  fetch('/api/gdpr/delete', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({email: email})
+  }).then(function(r){ return r.json(); })
+    .then(function(d){
+      alert(d.message || 'Als dit account bestaat, ontvang je een bevestigingsmail.');
+    }).catch(function(){
+      alert('Er ging iets mis. Probeer het opnieuw.');
+    });
+}
 </script>
 </body>
 </html>
