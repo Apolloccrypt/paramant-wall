@@ -41,7 +41,7 @@ nav{position:fixed;top:0;left:0;right:0;height:48px;background:var(--bg);border-
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 h1{font-size:clamp(28px,4.5vw,52px);font-weight:800;color:var(--t1);line-height:1.1;letter-spacing:-.5px;margin-bottom:16px}
 h1 em{font-style:normal;color:var(--g)}
-.hero-sub{font-size:13px;color:var(--t3);line-height:1.9;max-width:440px;margin-bottom:28px}
+.hero-sub{font-size:14px;color:var(--t3);line-height:1.9;max-width:480px;margin-bottom:28px}
 .hero-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:12px 22px;font-size:11px;font-family:var(--mono);font-weight:700;letter-spacing:.06em;text-decoration:none;border:none;cursor:pointer;transition:all .15s}
 .btn-g{background:var(--g);color:var(--bg)}
@@ -78,47 +78,47 @@ h1 em{font-style:normal;color:var(--g)}
 hr{border:none;border-top:1px solid var(--b1)}
 
 /* SECTION */
-.sec{padding:64px 24px;max-width:1100px;margin:0 auto}
-.sec-lbl{font-size:10px;color:var(--t4);letter-spacing:.1em;margin-bottom:6px}
-.sec-title{font-size:clamp(20px,3vw,32px);font-weight:800;color:var(--t1);line-height:1.15;margin-bottom:12px}
-.sec-sub{font-size:13px;color:var(--t3);line-height:1.9;max-width:520px;margin-bottom:40px}
+.sec{padding:72px 24px;max-width:1200px;margin:0 auto}
+.sec-lbl{font-size:11px;color:var(--t4);letter-spacing:.1em;margin-bottom:8px}
+.sec-title{font-size:clamp(26px,3.5vw,42px);font-weight:800;color:var(--t1);line-height:1.15;margin-bottom:16px}
+.sec-sub{font-size:14px;color:var(--t3);line-height:1.9;max-width:620px;margin-bottom:40px}
 
 /* FEATURES */
 .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--b1);border:1px solid var(--b1)}
 @media(max-width:700px){.feat-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:440px){.feat-grid{grid-template-columns:1fr}}
-.feat{background:var(--bg);padding:24px;transition:background .15s}
+.feat{background:var(--bg);padding:32px;transition:background .15s}
 .feat:hover{background:var(--s1)}
 .feat-n{font-size:9px;color:var(--t4);letter-spacing:.1em;margin-bottom:10px}
 .feat-ic{font-size:20px;margin-bottom:10px;display:block}
-.feat-title{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:6px}
-.feat-desc{font-size:11px;color:var(--t3);line-height:1.8}
+.feat-title{font-size:15px;font-weight:700;color:var(--t1);margin-bottom:8px}
+.feat-desc{font-size:12px;color:var(--t3);line-height:1.9}
 .ftag{display:inline-block;margin-top:10px;font-size:9px;padding:2px 6px;letter-spacing:.06em}
 .ftag-g{background:var(--gd);color:var(--g)}
 .ftag-r{background:rgba(239,68,68,.08);color:#f87171}
 
 /* HOW */
-.how-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--b1);border:1px solid var(--b1)}
+.how-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--b1);border:1px solid var(--b1);max-width:100%}
 @media(max-width:700px){.how-grid{grid-template-columns:1fr 1fr}}
-.how-step{background:var(--s1);padding:20px}
-.hn{font-size:9px;color:var(--t4);letter-spacing:.1em;margin-bottom:8px}
-.ht{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:4px}
-.hd{font-size:11px;color:var(--t3);line-height:1.7}
+.how-step{background:var(--s1);padding:36px}
+.hn{font-size:10px;color:var(--t4);letter-spacing:.1em;margin-bottom:10px}
+.ht{font-size:18px;font-weight:700;color:var(--t1);margin-bottom:8px}
+.hd{font-size:13px;color:var(--t3);line-height:1.8}
 .htag{display:inline-block;font-size:9px;padding:2px 5px;margin-top:8px;background:var(--gd);color:var(--g)}
 
 /* PRICING */
 .price-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--b1);border:1px solid var(--b1)}
 @media(max-width:900px){.price-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:500px){.price-grid{grid-template-columns:1fr}}
-.pc{background:var(--bg);padding:24px;position:relative;transition:background .15s}
+.pc{background:var(--bg);padding:32px;position:relative;transition:background .15s}
 .pc:hover{background:var(--s1)}
 .pc.featured{background:var(--s1);border-top:2px solid var(--g)}
 .pc-plan{font-size:9px;color:var(--t4);letter-spacing:.1em;margin-bottom:10px}
-.pc-price{font-size:28px;font-weight:800;color:var(--t1);margin-bottom:2px;line-height:1}
+.pc-price{font-size:36px;font-weight:800;color:var(--t1);margin-bottom:2px;line-height:1}
 .pc-price span{font-size:13px;font-weight:400;color:var(--t3)}
 .pc-period{font-size:11px;color:var(--t4);margin-bottom:18px}
 .pc-feats{list-style:none;margin-bottom:20px}
-.pc-feats li{font-size:11px;color:var(--t3);padding:4px 0;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:6px}
+.pc-feats li{font-size:12px;color:var(--t3);padding:6px 0;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:6px}
 .pc-feats li:last-child{border:none}
 .ck{color:var(--g);font-size:12px}
 .xx{color:var(--t4);font-size:12px}
@@ -172,7 +172,7 @@ footer{border-top:1px solid var(--b1);padding:24px;max-width:1100px;margin:0 aut
   </a>
   <div class="nav-links">
     <a href="#demo">DEMO</a><a href="#features">FEATURES</a>
-    <a href="#hoe">HOE HET WERKT</a>
+    <a href="#hoe">HOE HET WERKT</a><a href="/about.html">ABOUT</a>
     <a href="#pricing">PRICING</a>
     <a href="https://paramant.app" target="_blank">PARAMANT</a>
   </div>
@@ -440,128 +440,36 @@ Jij houdt bruikbare analytics. Jouw bezoekers houden hun privacy.</p>
 <hr>
 
 <!-- FEATURES -->
-<div class="sec" 
-      <!-- Technisch Transparant sectie -->
-      
-      <!-- About sectie -->
-      <section id="about" style="padding:72px 24px;background:var(--bg,#0c0e10);border-top:1px solid var(--b1,#1e2026)">
-        <div style="max-width:860px;margin:0 auto">
+<div class="sec" id="about">
+  <div class="sec-lbl">// OVER PARAMANT WALL</div>
+  <div class="sec-title">Gebouwd in Nederland.<br><span style="color:var(--g)">Voor iedereen die privacy serieus neemt.</span></div>
+  <p class="sec-sub">Nederlandse privacytechnologie op het principe dat digitale soevereiniteit geen luxe is, maar een recht.</p>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--b1);border:1px solid var(--b1);margin-bottom:32px">
+    <div style="background:var(--bg);padding:28px"><div style="font-size:9px;color:var(--g);letter-spacing:.1em;margin-bottom:10px">SOEVEREINITEIT</div><div style="font-size:11px;color:var(--t3);line-height:1.9">Data van Nederlandse bezoekers hoeft niet via Amerikaanse servers te lopen. Dat is een keuze, geen technische noodzaak.</div></div>
+    <div style="background:var(--bg);padding:28px"><div style="font-size:9px;color:var(--g);letter-spacing:.1em;margin-bottom:10px">TRANSPARANTIE</div><div style="font-size:11px;color:var(--t3);line-height:1.9">Elke klant heeft een publieke feed die live toont wat er geblokkeerd, gestript en doorgelaten wordt. Geen black box.</div></div>
+    <div style="background:var(--bg);padding:28px"><div style="font-size:9px;color:var(--g);letter-spacing:.1em;margin-bottom:10px">INTEGRITEIT</div><div style="font-size:11px;color:var(--t3);line-height:1.9">Wij verdienen aan het beheer en de infrastructuur &mdash; niet aan de data van jouw bezoekers.</div></div>
+  </div>
+  <a href="/about.html" class="btn btn-ghost" style="display:inline-flex;text-decoration:none">&rarr; Lees het volledige verhaal</a>
+</div>
+<hr>
 
-          <div style="font-size:9px;color:#5a6070;letter-spacing:.12em;margin-bottom:10px">// OVER PARAMANT WALL</div>
+<div class="sec" id="faq">
+  <div class="sec-lbl">// TECHNISCH TRANSPARANT</div>
+  <div class="sec-title">Antwoorden op de vragen<br>die je gaat stellen.</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--b1);border:1px solid var(--b1)">
+    <div style="background:var(--bg);padding:28px"><div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:10px">IP-ADRESSEN</div><div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:8px">Nooit opgeslagen.</div><div style="font-size:11px;color:var(--t3);line-height:1.8">IP's worden direct vervangen door <code style="color:var(--g)">SHA-256(ip+dag+salt)</code>. Elke dag een andere hash. Geen persistent tracking mogelijk.</div></div>
+    <div style="background:var(--bg);padding:28px"><div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:10px">TRACKING COOKIES</div><div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:8px">Volledig verwijderd.</div><div style="font-size:11px;color:var(--t3);line-height:1.8">Alle tracking cookies (<code style="color:var(--g)">_ga, _fbp, _fbc, _ttp</code>…) gestript vóór het request de Wall verlaat. Bereiken Google of Meta nooit.</div></div>
+    <div style="background:var(--bg);padding:28px"><div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:10px">DATA FORWARDING</div><div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:8px">Alleen wat jij toestaat.</div><div style="font-size:11px;color:var(--t3);line-height:1.8">Alleen events die jij expliciet toestaat gaan geanonimiseerd verder. Alle PII-velden verwijderd of gehasht.</div></div>
+    <div style="background:var(--bg);padding:28px"><div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:10px">LOGGING</div><div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:8px">Zero raw logging.</div><div style="font-size:11px;color:var(--t3);line-height:1.8">Geen enkel request wordt opgeslagen. De Wall verwerkt en vergeet. Alleen maandtotalen worden bewaard.</div></div>
+    <div style="background:var(--bg);padding:28px"><div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:10px">CONTROLE</div><div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:8px">Publieke feed. Altijd.</div><div style="font-size:11px;color:var(--t3);line-height:1.8">Elke klant heeft een publieke feed (<code style="color:var(--g)">/feed/[hash]</code>) die live toont wat er gestript, geblokkeerd en doorgelaten wordt.</div></div>
+    <div style="background:var(--bg);padding:28px"><div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:10px">COOKIE WALL AP</div><div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:8px">Geen banner meer nodig.</div><div style="font-size:11px;color:var(--t3);line-height:1.8">De AP verbiedt cookie walls. Paramant Wall maakt tracking cookies overbodig — geen gedwongen keuze voor bezoekers.</div></div>
+  </div>
+</div>
+<hr>
 
-          <h2 style="font-size:clamp(22px,4vw,38px);font-weight:800;color:#e2e4e8;line-height:1.15;margin-bottom:24px;max-width:640px">
-            Gebouwd in Nederland.<br>
-            <span style="color:#00ff9d">Voor iedereen die privacy serieus neemt.</span>
-          </h2>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-bottom:40px">
-            <div>
-              <p style="font-size:12px;color:#8a8e98;line-height:2;margin-bottom:16px">
-                Bedrijven, kranten en webshops in Nederland staan voor een lastige keuze: analytics zijn noodzakelijk om te begrijpen hoe bezoekers hun site gebruiken, maar de cookies en trackers die daarvoor gebruikt worden staan op gespannen voet met de privacywetgeving die de Autoriteit Persoonsgegevens handhaaft.
-              </p>
-              <p style="font-size:12px;color:#8a8e98;line-height:2;margin-bottom:16px">
-                De vraag <em style="color:#e2e4e8">"als die trackers problemen opleveren, hoe doen we het dan?"</em> bleef lange tijd onbeantwoord. Er was geen Nederlandse oplossing. Bedrijven kozen tussen privacy schenden of blind vliegen.
-              </p>
-              <p style="font-size:12px;color:#8a8e98;line-height:2">
-                PARAMANT WALL is die oplossing. Geen vervanging van analytics — een <em style="color:#e2e4e8">filter</em> ervóór. Jij houdt je data. Jouw bezoekers houden hun privacy. Iedereen wint.
-              </p>
-            </div>
-            <div>
-              <p style="font-size:12px;color:#8a8e98;line-height:2;margin-bottom:16px">
-                De verantwoordelijkheid voor privacybescherming ligt vandaag de dag bij de eindgebruiker — een cookiebanner wegklikken, instellingen aanpassen, een adblocker installeren. Dat is de omgekeerde wereld.
-              </p>
-              <p style="font-size:12px;color:#8a8e98;line-height:2;margin-bottom:16px">
-                Wij geloven dat die verantwoordelijkheid thuishoort bij de organisaties die websites beheren: het MKB, de regionale krant, de overheidsinstantie, de webshop. Zij bepalen welke technologie zij inzetten — en dus ook of die technologie hun bezoekers respecteert.
-              </p>
-              <p style="font-size:12px;color:#00ff9d;line-height:2">
-                PARAMANT WALL geeft die organisaties de middelen om die keuze te maken. Concreet. Betaalbaar. Zonder afbreuk te doen aan de functionaliteit waar ze op vertrouwen.
-              </p>
-            </div>
-          </div>
-
-          <!-- Filosofie punten -->
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:40px">
-            <div style="padding:18px;border:1px solid #1e2026;background:#111214">
-              <div style="font-size:9px;color:#00ff9d;letter-spacing:.1em;margin-bottom:8px">SOUVEREINITEIT</div>
-              <div style="font-size:11px;color:#8a8e98;line-height:1.8">Data van Nederlandse bezoekers hoeft niet via Amerikaanse servers te lopen om bruikbare analytics te produceren. Dat is een keuze, geen technische noodzaak.</div>
-            </div>
-            <div style="padding:18px;border:1px solid #1e2026;background:#111214">
-              <div style="font-size:9px;color:#00ff9d;letter-spacing:.1em;margin-bottom:8px">TRANSPARANTIE</div>
-              <div style="font-size:11px;color:#8a8e98;line-height:1.8">Elke klant heeft een publieke feed die live toont wat er geblokkeerd, gestript en doorgelaten wordt. Geen black box. Controleerbaar door iedereen.</div>
-            </div>
-            <div style="padding:18px;border:1px solid #1e2026;background:#111214">
-              <div style="font-size:9px;color:#00ff9d;letter-spacing:.1em;margin-bottom:8px">OPEN SOURCE</div>
-              <div style="font-size:11px;color:#8a8e98;line-height:1.8">Wij verdienen aan het beheer en de infrastructuur — niet aan de data van jouw bezoekers.</div>
-            </div>
-          </div>
-
-          <!-- PARAMANT Chat verwijzing -->
-          <div style="padding:24px;border:1px solid rgba(0,255,157,.2);background:rgba(0,255,157,.03);display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center">
-            <div>
-              <div style="font-size:9px;color:#00ff9d;letter-spacing:.1em;margin-bottom:8px">DEZELFDE FILOSOFIE — PARAMANT CHAT</div>
-              <div style="font-size:12px;color:#8a8e98;line-height:1.9;max-width:560px">
-                PARAMANT WALL is niet op zichzelf staand. Het maakt deel uit van een breder project: <em style="color:#e2e4e8">PARAMANT</em> — Nederlandse privacytechnologie gebouwd op het principe dat digitale soevereiniteit geen luxe is, maar een recht. PARAMANT Chat biedt versleutelde, anonieme communicatie op dezelfde grondslag. Geen accounts. Geen logs. Geen big tech.
-              </div>
-            </div>
-            <a href="https://paramant.app" target="_blank" rel="noopener" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 24px;border:1px solid rgba(0,255,157,.25);color:#00ff9d;text-decoration:none;white-space:nowrap;transition:background .15s;background:transparent">
-              <div style="font-size:20px">&#x1F4AC;</div>
-              <div style="font-size:9px;font-weight:800;letter-spacing:.08em">PARAMANT CHAT</div>
-              <div style="font-size:8px;color:#5a6070">paramant.app</div>
-            </a>
-          </div>
-
-        </div>
-      </section>
-
-      <section id="transparant" style="padding:64px 24px;background:var(--s1);border-top:1px solid var(--b1)">
-        <div style="max-width:900px;margin:0 auto">
-          <div style="font-size:9px;color:var(--t4);letter-spacing:.12em;margin-bottom:8px">// TECHNISCH TRANSPARANT</div>
-          <h2 style="font-size:clamp(18px,3vw,28px);font-weight:800;color:var(--t1);margin-bottom:32px">Antwoorden op de vragen die je gaat stellen.</h2>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-
-            <div style="padding:20px;border:1px solid var(--b1);background:var(--bg)">
-              <div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:8px">IP-ADRESSEN</div>
-              <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:8px">Nooit opgeslagen.</div>
-              <div style="font-size:10px;color:var(--t3);line-height:1.8">IP's worden direct vervangen door <code style="color:var(--g)">SHA-256(ip + dag + salt)</code>. Elke dag een andere hash. Geen persistent tracking. Geen koppeling naar persoon mogelijk.</div>
-            </div>
-
-            <div style="padding:20px;border:1px solid var(--b1);background:var(--bg)">
-              <div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:8px">TRACKING COOKIES</div>
-              <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:8px">Volledig verwijderd.</div>
-              <div style="font-size:10px;color:var(--t3);line-height:1.8">Alle tracking cookies (<code style="color:var(--g)">_ga, _fbp, _fbc, _ttp</code>…) worden gestript vóór het request de Wall verlaat. Ze bereiken Google of Meta nooit.</div>
-            </div>
-
-            <div style="padding:20px;border:1px solid var(--b1);background:var(--bg)">
-              <div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:8px">DATA FORWARDING</div>
-              <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:8px">Alleen wat jij toestaat.</div>
-              <div style="font-size:10px;color:var(--t3);line-height:1.8">Alleen events die jij expliciet toestaat (bijv. <code style="color:var(--g)">page_view</code>) gaan in geanonimiseerde vorm verder. Alle PII-velden zijn verwijderd of gehasht.</div>
-            </div>
-
-            <div style="padding:20px;border:1px solid var(--b1);background:var(--bg)">
-              <div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:8px">LOGGING</div>
-              <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:8px">Zero raw logging.</div>
-              <div style="font-size:10px;color:var(--t3);line-height:1.8">Geen enkel request wordt opgeslagen. De Wall verwerkt en vergeet. Alleen maandtotalen (integers) worden bewaard. Geen tijdstempels per event.</div>
-            </div>
-
-            <div style="padding:20px;border:1px solid var(--b1);background:var(--bg)">
-              <div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:8px">CONTROLE</div>
-              <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:8px">Publieke feed. Altijd.</div>
-              <div style="font-size:10px;color:var(--t3);line-height:1.8">Elke klant heeft een publieke feed (<code style="color:var(--g)">/feed/[hash]</code>) die live toont wat er gestript, geblokkeerd en doorgelaten wordt. Iedereen kan meekijken.</div>
-            </div>
-
-            <div style="padding:20px;border:1px solid var(--b1);background:var(--bg)">
-              <div style="font-size:9px;color:var(--g);letter-spacing:.08em;margin-bottom:8px">COOKIE WALL AP</div>
-              <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:8px">Geen banner meer nodig.</div>
-              <div style="font-size:10px;color:var(--t3);line-height:1.8">De AP verbiedt cookie walls. Paramant Wall maakt tracking cookies overbodig — geen gedwongen keuze voor bezoekers, geen cookie banner nodig op je site.</div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-      id="features">
-  <div class="sec-lbl">
+      <section id="features">
       <!-- AP Cookie Wall sectie -->
-      <section style="background:#111214;border-top:1px solid #1e2026;border-bottom:1px solid #1e2026;padding:56px 20px">
+      <section style="background:#111214;border-top:1px solid #1e2026;border-bottom:1px solid #1e2026;padding:36px 20px">
         <div style="max-width:960px;margin:0 auto">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start">
             <div>
@@ -588,7 +496,8 @@ Jij houdt bruikbare analytics. Jouw bezoekers houden hun privacy.</p>
         </div>
       </section>
 
-      // FEATURES</div>
+  <div class="sec">
+  <div class="sec-lbl">// FEATURES</div>
   <div class="sec-title">Alles wat je nodig hebt.<br>Niets wat je niet wilt.</div>
   <div class="feat-grid">
     <div class="feat"><span class="feat-n">01</span><span class="feat-ic">⛔</span><div class="feat-title">PII Stripper</div><div class="feat-desc">Cookies, IP-adressen, User-Agent fingerprints en user IDs gestript vóór forwarding. Geen PII bereikt Google.</div><span class="ftag ftag-r">GDPR Art. 5</span></div>
@@ -603,7 +512,7 @@ Jij houdt bruikbare analytics. Jouw bezoekers houden hun privacy.</p>
 <hr>
 
 <!-- HOW -->
-<div class="sec" id="hoe">
+<div class="sec" id="hoe" style="max-width:100%;padding-left:32px;padding-right:32px">
   <div class="sec-lbl">// HOE HET WERKT</div>
   <div class="sec-title">Van tracker naar Wall naar analytics</div>
   <div class="how-grid">
@@ -622,7 +531,7 @@ Jij houdt bruikbare analytics. Jouw bezoekers houden hun privacy.</p>
 <hr>
 
 <!-- PRICING -->
-<div class="sec" id="pricing">
+<div class="sec" id="pricing" style="max-width:1200px">
   <div class="sec-lbl">// PRICING</div>
   <div class="sec-title">Transparante prijzen.<br>Geen verrassingen.</div>
   <p class="sec-sub">Website-eigenaren kiezen een plan. Bezoekers van jouw website zijn beschermd via de Wall van jouw website — zij betalen nooit, merken niets, en worden niet gevolgd.</p>
