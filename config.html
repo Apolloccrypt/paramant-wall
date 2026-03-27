@@ -178,8 +178,11 @@ h1{font-size:16px;font-weight:800;color:var(--t1);margin-bottom:4px}
 </main>
 
 <div class="save-bar">
-  <span class="save-bar-text" id="save-status">Wijzigingen worden automatisch meegenomen bij Stripe checkout.</span>
-  <button class="btn-save" onclick="saveConfig()">OPSLAAN &amp; ACTIVEREN</button>
+  <span class="save-bar-text" id="save-status">Sla je configuratie op en ga verder naar je account aanmaken.</span>
+  <div style="display:flex;gap:8px">
+    <a href="/" class="btn-save" style="background:transparent;border:1px solid #2a2d35;color:#8a8e98;text-decoration:none;display:flex;align-items:center">&#x2190; Terug</a>
+    <button class="btn-save" onclick="saveAndContinue()">OPSLAAN &amp; VERDER NAAR REGISTRATIE &#x2192;</button>
+  </div>
 </div>
 
 <script>
@@ -370,7 +373,25 @@ function renderCustom() {
   `).join('');
 }
 
-function saveConfig() {
+function saveAndContinue() {
+  const vals = Object.values(config);
+  const blocked = vals.filter(function(v){ return v === 'block'; }).length;
+  const stripped = vals.filter(function(v){ return v === 'strip'; }).length;
+  const allowed  = vals.filter(function(v){ return v === 'allow'; }).length;
+  const data = {
+    config: config,
+    custom: custom,
+    savedAt: new Date().toISOString(),
+    template: typeof _activeTemplate !== 'undefined' ? _activeTemplate : 'custom',
+    stats: {blocked: blocked, stripped: stripped, allowed: allowed, customCount: custom.length}
+  };
+  try { localStorage.setItem('wall_tracker_config', JSON.stringify(data)); } catch(e) {}
+
+  // Redirect naar homepage met modal open
+  window.location.href = '/?register=1&cfg=saved&blocked=' + blocked + '&stripped=' + stripped;
+}
+
+function saveConfig() { saveAndContinue(); }
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'OPSLAAN...';
   const data = {config, custom, savedAt: new Date().toISOString(), template: _activeTemplate || 'custom'};

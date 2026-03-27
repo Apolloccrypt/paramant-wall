@@ -684,6 +684,27 @@ function wmCopy(sid, bid) {
   }, 2000);
 }
 document.addEventListener('DOMContentLoaded', function() {
+  // Auto-open modal als terugkomt van config.html
+  var urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('register') === '1') {
+    setTimeout(function() {
+      wmOpen('starter');
+      // Toon config indicator
+      try {
+        var stored = JSON.parse(localStorage.getItem('wall_tracker_config') || 'null');
+        if (stored && stored.stats) {
+          var st = stored.stats;
+          var cfgLink = document.querySelector('a[href="/config.html"]');
+          if (cfgLink) {
+            cfgLink.innerHTML = '&#x2713; CONFIG OPGESLAGEN: ' + st.blocked + ' geblokkeerd &middot; ' + st.stripped + ' gestript &middot; Aanpassen &#x2192;';
+            cfgLink.style.borderColor = 'rgba(0,255,157,.5)';
+            cfgLink.style.background = 'rgba(0,255,157,.1)';
+            cfgLink.style.color = '#00ff9d';
+          }
+        }
+      } catch(e) {}
+    }, 200);
+  }
   
   var str  = document.getElementById('wm-str');
   if (pass && str) {
