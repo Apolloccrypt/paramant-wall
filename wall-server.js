@@ -13,7 +13,7 @@ const crypto  = require('crypto');
 const path    = require('path');
 
 const PORT    = parseInt(process.env.PORT) || 4000;
-const VERSION = '3.0.0';
+const VERSION = '3.1.0';
 const BASE    = process.env.WALL_BASE_URL || 'https://wall.paramant.app';
 const IS_PROD = process.env.NODE_ENV === 'production';
 
@@ -42,6 +42,43 @@ const { BUILT_IN_TRACKERS, TEMPLATES, TRACKER_CATEGORIES, getTrackerAction } = r
 const app = express();
 app.disable('x-powered-by');
 app.disable('etag');
+
+// Feed cleanup: max 100 events, max 10 min TTL
+async function cleanFeedEvents(feedHash) {
+  const key = 'feed:events:' + feedHash;
+  try {
+    const now = Date.now();
+    const events = await redis.lRange(key, 0, -1).catch(() => []);
+    const fresh = events
+      .map(function(e) { try { return JSON.parse(e); } catch(x) { return null; } })
+      .filter(function(e) { return e && (now - e.ts) < 600000; })
+      .slice(-100);
+    if (fresh.length !== events.length) {
+      await redis.del(key);
+      if (fresh.length > 0) {
+        await redis.rPush(key, ...fresh.map(function(e) { return JSON.stringify(e); }));
+        await redis.expire(key, 600);
+      }
+    }
+  } catch(err) {}
+}
+
+async function deleteFeedData(feedHash) {
+  if (!feedHash) return;
+  await redis.del('feed:events:' + feedHash).catch(function() {});
+  await redis.del('feed:stats:' + feedHash).catch(function() {});
+}
+
+// Cleanup job elke 5 minuten
+setInterval(async function() {
+  try {
+    const hashes = await pg.query('SELECT feed_hash FROM projects').catch(function() { return {rows:[]}; });
+    for (const row of hashes.rows) {
+      await cleanFeedEvents(row.feed_hash);
+    }
+  } catch(err) {}
+}, 300000);
+
 app.use(express.json({ limit: '32kb' }));
 
 // ── Security headers ─────────────────────────────────────────────
@@ -830,11 +867,66 @@ app.get('/api/trackers', function(req, res) {
   });
 });
 
+app.post('/api/gdpr/delete', async function(req, res) {
+  const { email, apiKey } = req.body || {};
+  if (!email && !apiKey) return res.status(400).json({ error: 'email_or_key_required' });
+  try {
+    let userId = null;
+    if (apiKey) {
+      const r = await pg.query('SELECT user_id FROM customers WHERE api_key = $1 LIMIT 1', [apiKey]);
+      if (r.rows.length) userId = r.rows[0].user_id;
+    }
+    if (!userId && email) {
+      const r = await pg.query('SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL LIMIT 1', [email]);
+      if (r.rows.length) userId = r.rows[0].id;
+    }
+    if (!userId) return res.status(404).json({ error: 'not_found' });
+    // Soft delete - CASCADE verwijdert customers, projects, subscriptions etc.
+    await pg.query('UPDATE users SET deleted_at = NOW(), email = $1 WHERE id = $2',
+      ['deleted_' + require('crypto').randomBytes(8).toString('hex') + '@deleted', userId]);
+    await pg.query('UPDATE customers SET enabled = false WHERE user_id = $1', [userId]);
+    // GDPR audit trail (geen PII - alleen hash)
+    const userHash = require('crypto').createHash('sha256').update(userId).digest('hex').slice(0, 16);
+    await pg.query(
+      'INSERT INTO gdpr_deletions (id, user_hash, deleted_at, reason) VALUES (gen_random_uuid(), $1, NOW(), $2)',
+      [userHash, 'user_request']
+    ).catch(() => {});
+    // Verwijder Redis cache
+    redis.del('wk:' + userId).catch(() => {});
+    return res.json({ ok: true, message: 'Account verwijderd. Alle persoonsgegevens zijn gewist.' });
+  } catch(e) {
+    console.error('[WALL] GDPR delete error:', e.code || e.message.slice(0, 50));
+    return res.status(500).json({ error: 'delete_failed' });
+  }
+});
+
 app.get('/health', function(req, res) {
   res.json({ ok: true, version: VERSION, ts: new Date().toISOString() });
 });
 
 app.get('/stats', async function(req, res) {
+  try {
+    const r1 = await pg.query('SELECT COUNT(*) as customers FROM customers WHERE enabled=true');
+    const r2 = await pg.query('SELECT SUM(requests) as reqs, SUM(blocked) as blocked, SUM(stripped) as stripped, SUM(allowed) as allowed FROM usage_monthly');
+    const r3 = await pg.query('SELECT month, SUM(requests) as reqs, SUM(blocked) as blocked FROM usage_monthly GROUP BY month ORDER BY month DESC LIMIT 6');
+    return res.json({
+      ok: true,
+      active_customers: parseInt(r1.rows[0].customers)||0,
+      totals: {
+        requests: parseInt(r2.rows[0].reqs)||0,
+        blocked:  parseInt(r2.rows[0].blocked)||0,
+        stripped: parseInt(r2.rows[0].stripped)||0,
+        allowed:  parseInt(r2.rows[0].allowed)||0,
+      },
+      timeline: r3.rows.map(function(r){ return { month: r.month, requests: parseInt(r.reqs)||0, blocked: parseInt(r.blocked)||0 }; }),
+      ts: new Date().toISOString()
+    });
+  } catch(e) {
+    return res.json({ ok: true, active_customers: 0, totals: {requests:0,blocked:0,stripped:0,allowed:0}, timeline: [], ts: new Date().toISOString() });
+  }
+});
+
+app.get('/stats_old_placeholder',
   try {
     const r = await pg.query(
       'SELECT COALESCE(SUM(requests),0) as total, COALESCE(SUM(blocked),0) as blocked, COALESCE(SUM(stripped),0) as stripped FROM usage_monthly'

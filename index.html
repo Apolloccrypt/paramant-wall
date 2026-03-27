@@ -168,7 +168,7 @@ footer{border-top:1px solid var(--b1);padding:24px;max-width:1100px;margin:0 aut
 <nav>
   <a href="/" class="nav-logo">
     <span class="n">PARAMANT<span class="w"> WALL</span></span>
-    <span class="v">v0.1.0</span>
+    <span class="v">v3.1.0</span>
   </a>
   <div class="nav-links">
     <a href="#demo">DEMO</a><a href="#features">FEATURES</a>
@@ -183,11 +183,11 @@ footer{border-top:1px solid var(--b1);padding:24px;max-width:1100px;margin:0 aut
 <!-- HERO -->
 <div class="hero">
   <div>
-    <div class="hero-badge"><span class="blink"></span>LIVE · wall.paramant.app · v0.1.0</div>
+    <div class="hero-badge"><span class="blink"></span>LIVE · wall.paramant.app · v3.1.0</div>
     <h1>Analytics ja.<br><em>Privacy ook.</em></h1>
     <p class="hero-sub">Een privacy proxy voor jouw website. Alle tracking requests lopen via PARAMANT WALL — cookies gestript, IP geanonimiseerd, PII geblokkeerd. Jij houdt analytics. Jouw bezoekers houden hun privacy. Bedrijven betalen. Bezoekers nooit.</p>
     <div class="hero-btns">
-      <a href="#" class="btn btn-g" onclick="event.preventDefault();openModal('starter')" onclick="event.preventDefault();openModal('starter')">>> ACCOUNT AANMAKENMAKEN</a>
+      <a href="#" class="btn btn-g" onclick="event.preventDefault();openModal('starter')">>> ACCOUNT AANMAKENMAKEN</a>
       <a href="#hoe" class="btn btn-ghost">Hoe werkt het? v</a>
     </div>
     <div class="trust">
@@ -505,96 +505,183 @@ footer{border-top:1px solid var(--b1);padding:24px;max-width:1100px;margin:0 aut
   <button onclick="wmClose()" style="background:none;border:none;color:#5a6070;font-size:16px;cursor:pointer;padding:4px">✕</button>
 </div>
 
-<div id="wm-s1" style="padding:16px 20px">
+<div id="wm-s1" style="padding:20px">
 
-  <!-- Plan selector -->
-  <div style="font-size:9px;color:#5a6070;letter-spacing:.1em;margin-bottom:8px">KIES JE PLAN</div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px">
-
-    <div onclick="wmPlan('starter',this)" id="wmp-starter" style="padding:10px 6px;background:rgba(0,255,157,.06);border:1px solid rgba(0,255,157,.3);color:#00ff9d;font-size:9px;cursor:pointer;text-align:center;transition:all .15s">
-      <div style="font-weight:800;letter-spacing:.06em;font-size:10px">STARTER</div>
-      <div style="font-size:20px;font-weight:800;color:#e2e4e8;line-height:1.2;margin:3px 0">&#x20AC;19<span style="font-size:9px;font-weight:400;color:#5a6070">/mnd</span></div>
-      <div style="font-size:8px;color:#00ff9d;margin-bottom:4px;font-weight:600">Voor MKB &amp; starters</div>
-      <div style="font-size:8px;color:#5a6070;line-height:1.8;border-top:1px solid #1e2026;padding-top:5px;margin-top:2px;text-align:left">
-        <span style="color:#00ff9d">&#x2713;</span> 8 domeinen<br>
-        <span style="color:#00ff9d">&#x2713;</span> 2.000 req/min<br>
-        <span style="color:#00ff9d">&#x2713;</span> GA4 + Meta proxy<br>
-        <span style="color:#00ff9d">&#x2713;</span> Publieke feed<br>
-        <span style="color:#00ff9d">&#x2713;</span> Email support<br>
-        <span style="color:#3d4149">&#x2715;</span> Custom trackers<br>
-        <span style="color:#3d4149">&#x2715;</span> SLA garantie
-      </div>
-    </div>
-
-    <div onclick="wmPlan('pro',this)" id="wmp-pro" style="padding:10px 6px;background:#0c0e10;border:1px solid #2a2d35;color:#8a8e98;font-size:9px;cursor:pointer;text-align:center;transition:all .15s;position:relative">
-      <div style="position:absolute;top:0;left:0;right:0;background:#f5c400;color:#0c0e10;font-size:7px;font-weight:800;text-align:center;padding:2px;letter-spacing:.06em">MEEST GEKOZEN</div>
-      <div style="font-weight:800;letter-spacing:.06em;margin-top:12px;font-size:10px">PRO</div>
-      <div style="font-size:20px;font-weight:800;color:#e2e4e8;line-height:1.2;margin:3px 0">&#x20AC;49<span style="font-size:9px;font-weight:400;color:#5a6070">/mnd</span></div>
-      <div style="font-size:8px;color:#f5c400;margin-bottom:4px;font-weight:600">Voor groeiende bedrijven</div>
-      <div style="font-size:8px;color:#5a6070;line-height:1.8;border-top:1px solid #1e2026;padding-top:5px;margin-top:2px;text-align:left">
-        <span style="color:#00ff9d">&#x2713;</span> 40 domeinen<br>
-        <span style="color:#00ff9d">&#x2713;</span> 15.000 req/min<br>
-        <span style="color:#00ff9d">&#x2713;</span> GA4 + Meta + custom<br>
-        <span style="color:#00ff9d">&#x2713;</span> Publieke feed<br>
-        <span style="color:#00ff9d">&#x2713;</span> Prioriteit support<br>
-        <span style="color:#00ff9d">&#x2713;</span> Custom trackers<br>
-        <span style="color:#3d4149">&#x2715;</span> SLA garantie
-      </div>
-    </div>
-
-    <div onclick="wmPlan('business',this)" id="wmp-business" style="padding:10px 6px;background:#0c0e10;border:1px solid #2a2d35;color:#8a8e98;font-size:9px;cursor:pointer;text-align:center;transition:all .15s">
-      <div style="font-weight:800;letter-spacing:.06em;font-size:10px">BUSINESS</div>
-      <div style="font-size:20px;font-weight:800;color:#e2e4e8;line-height:1.2;margin:3px 0">&#x20AC;99<span style="font-size:9px;font-weight:400;color:#5a6070">/mnd</span></div>
-      <div style="font-size:8px;color:#60a5fa;margin-bottom:4px;font-weight:600">Voor enterprise &amp; agencies</div>
-      <div style="font-size:8px;color:#5a6070;line-height:1.8;border-top:1px solid #1e2026;padding-top:5px;margin-top:2px;text-align:left">
-        <span style="color:#00ff9d">&#x2713;</span> 150 domeinen<br>
-        <span style="color:#00ff9d">&#x2713;</span> 80.000 req/min<br>
-        <span style="color:#00ff9d">&#x2713;</span> Alle proxies + custom<br>
-        <span style="color:#00ff9d">&#x2713;</span> Publieke feed<br>
-        <span style="color:#00ff9d">&#x2713;</span> Dedicated support<br>
-        <span style="color:#00ff9d">&#x2713;</span> Custom trackers<br>
-        <span style="color:#00ff9d">&#x2713;</span> SLA 99.9% garantie
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Test plan knop -->
-  <div style="margin-bottom:12px">
-    <button onclick="wmSelectTest()" id="wmp-test" style="width:100%;padding:6px 10px;background:#0c0e10;border:1px solid rgba(245,196,0,.25);color:#f5c400;font-family:inherit;font-size:9px;cursor:pointer;letter-spacing:.04em;transition:all .15s;text-align:left">
-      &#x25B7; TEST &#x2014; &#x20AC;0.01 &middot; 10 minuten toegang &middot; <span style="color:#3d4149">voor ontwikkelaars / demo</span>
-    </button>
-  </div>
+  <!-- STAP 1: Account aanmaken -->
+  <div style="font-size:9px;color:#5a6070;letter-spacing:.1em;margin-bottom:4px">STAP 1 VAN 2 — ACCOUNT AANMAKEN</div>
+  <div style="font-size:11px;color:#e2e4e8;margin-bottom:16px">Vul je e-mailadres in. Je configureert daarna je plan en domeinen.</div>
 
   <!-- Email -->
-  <div style="margin-bottom:10px">
+  <div style="margin-bottom:12px">
     <label style="display:block;font-size:9px;color:#5a6070;letter-spacing:.08em;margin-bottom:4px">E-MAILADRES</label>
     <input id="wm-email" type="email" placeholder="jij@bedrijf.nl" autocomplete="email"
       style="width:100%;padding:10px 11px;background:#0c0e10;border:1px solid #2a2d35;color:#e2e4e8;font-family:inherit;font-size:12px;outline:none">
   </div>
 
-  <!-- Domeinen -->
-  <div style="margin-bottom:12px">
-    <label style="display:block;font-size:9px;color:#5a6070;letter-spacing:.08em;margin-bottom:4px">
-      WEBSITE DOMEIN(EN) <span style="color:#3d4149;font-size:8px;letter-spacing:0">&#x2014; URL lock, alleen requests van deze domeinen</span>
-    </label>
-    <input id="wm-domain" type="text" placeholder="mijnsite.nl, shop.mijnsite.nl"
-      style="width:100%;padding:10px 11px;background:#0c0e10;border:1px solid #2a2d35;color:#e2e4e8;font-family:inherit;font-size:11px;outline:none">
-    <div style="font-size:8px;color:#3d4149;margin-top:3px">Meerdere domeinen: komma-gescheiden. Starter: max 8 &middot; Pro: max 40 &middot; Business: max 150</div>
-  </div>
-
   <!-- Terms -->
-  <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border:1px solid #1e2026;background:#0c0e10;margin-bottom:12px;width:100%">
+  <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border:1px solid #1e2026;background:#0c0e10;margin-bottom:14px;width:100%">
     <input id="wm-terms" type="checkbox" style="flex-shrink:0;accent-color:#00ff9d;width:16px;height:16px;cursor:pointer">
     <span style="font-size:10px;color:#5a6070;line-height:1.6">Ik accepteer de <a href="/privacy" target="_blank" style="color:#00ff9d">privacy policy</a> en verwerkingsvoorwaarden van PARAMANT WALL.</span>
   </label>
 
   <div id="wm-err" style="display:none;padding:7px 10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#f87171;font-size:10px;margin-bottom:10px"></div>
 
-  <button id="wm-btn" onclick="wmSubmit()" style="width:100%;padding:12px;background:#00ff9d;color:#0c0e10;font-family:inherit;font-size:11px;font-weight:800;letter-spacing:.08em;border:none;cursor:pointer;transition:background .15s">
-    >> DOOR NAAR BETALING
+  <button onclick="wmStep1Next()" style="width:100%;padding:12px;background:#00ff9d;color:#0c0e10;font-family:inherit;font-size:11px;font-weight:800;letter-spacing:.08em;border:none;cursor:pointer">
+    >> VOLGENDE: PLAN &amp; CONFIGURATIE
   </button>
   <div style="text-align:center;margin-top:8px;font-size:9px;color:#3d4149">Geen wachtwoord &middot; Direct Stripe &middot; Veilig &amp; priv&#xE9;</div>
+
+</div>
+
+<div id="wm-s1b" style="display:none;padding:20px">
+
+  <!-- STAP 2: Plan + Domein + Template -->
+  <div style="font-size:9px;color:#5a6070;letter-spacing:.1em;margin-bottom:4px">STAP 2 VAN 2 — PLAN &amp; CONFIGURATIE</div>
+
+  <!-- Plan selector -->
+  <div style="font-size:9px;color:#5a6070;letter-spacing:.08em;margin-bottom:6px;margin-top:10px">KIES JE PLAN</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px">
+    <div onclick="wmPlan('starter',this)" id="wmp-starter" style="padding:10px 6px;background:rgba(0,255,157,.06);border:1px solid rgba(0,255,157,.3);color:#00ff9d;font-size:9px;cursor:pointer;text-align:center;transition:all .15s">
+      <div style="font-weight:800;font-size:10px">STARTER</div>
+      <div style="font-size:18px;font-weight:800;color:#e2e4e8;margin:3px 0">&#x20AC;19<span style="font-size:9px;font-weight:400;color:#5a6070">/mnd</span></div>
+      <div style="font-size:8px;color:#5a6070;line-height:1.7;border-top:1px solid #1e2026;padding-top:4px;margin-top:4px">
+        8 domeinen<br>2.000 req/min<br>GA4 + Meta<br>Publieke feed
+      </div>
+    </div>
+    <div onclick="wmPlan('pro',this)" id="wmp-pro" style="padding:10px 6px;background:#0c0e10;border:1px solid #2a2d35;color:#8a8e98;font-size:9px;cursor:pointer;text-align:center;transition:all .15s;position:relative">
+      <div style="position:absolute;top:0;left:0;right:0;background:#f5c400;color:#0c0e10;font-size:7px;font-weight:800;text-align:center;padding:2px">POPULAIR</div>
+      <div style="font-weight:800;font-size:10px;margin-top:10px">PRO</div>
+      <div style="font-size:18px;font-weight:800;color:#e2e4e8;margin:3px 0">&#x20AC;49<span style="font-size:9px;font-weight:400;color:#5a6070">/mnd</span></div>
+      <div style="font-size:8px;color:#5a6070;line-height:1.7;border-top:1px solid #1e2026;padding-top:4px;margin-top:4px">
+        40 domeinen<br>15.000 req/min<br>Custom trackers<br>Prioriteit
+      </div>
+    </div>
+    <div onclick="wmPlan('business',this)" id="wmp-business" style="padding:10px 6px;background:#0c0e10;border:1px solid #2a2d35;color:#8a8e98;font-size:9px;cursor:pointer;text-align:center;transition:all .15s">
+      <div style="font-weight:800;font-size:10px">BUSINESS</div>
+      <div style="font-size:18px;font-weight:800;color:#e2e4e8;margin:3px 0">&#x20AC;99<span style="font-size:9px;font-weight:400;color:#5a6070">/mnd</span></div>
+      <div style="font-size:8px;color:#5a6070;line-height:1.7;border-top:1px solid #1e2026;padding-top:4px;margin-top:4px">
+        150 domeinen<br>80.000 req/min<br>SLA garantie<br>Dedicated
+      </div>
+    </div>
+  </div>
+  <div style="margin-bottom:10px">
+    <button onclick="wmSelectTest()" id="wmp-test" style="width:100%;padding:6px;background:#0c0e10;border:1px solid rgba(245,196,0,.25);color:#f5c400;font-family:inherit;font-size:9px;cursor:pointer">
+      &#x25B7; TEST &#x2014; &#x20AC;0.01 &middot; 10 minuten toegang &middot; voor ontwikkelaars
+    </button>
+  </div>
+
+  <!-- Domein -->
+  <div style="margin-bottom:10px">
+    <label style="display:block;font-size:9px;color:#5a6070;letter-spacing:.08em;margin-bottom:4px">
+      WEBSITE DOMEIN(EN) <span style="color:#3d4149;font-size:8px">&#x2014; URL lock</span>
+    </label>
+    <input id="wm-domain" type="text" placeholder="mijnsite.nl, shop.mijnsite.nl"
+      style="width:100%;padding:10px 11px;background:#0c0e10;border:1px solid #2a2d35;color:#e2e4e8;font-family:inherit;font-size:11px;outline:none">
+    <div style="font-size:8px;color:#3d4149;margin-top:3px">Meerdere domeinen: komma-gescheiden. Starter: max 8 &middot; Pro: max 40</div>
+  </div>
+
+  <!-- Template -->
+  <div style="margin-bottom:14px">
+    <label style="display:block;font-size:9px;color:#5a6070;letter-spacing:.08em;margin-bottom:6px">PRIVACY TEMPLATE</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+      <div onclick="wmTemplate('ultra-streng',this)" id="wmt-ultra-streng" style="padding:8px;background:rgba(0,255,157,.06);border:1px solid rgba(0,255,157,.3);cursor:pointer;font-size:8px;color:#00ff9d;text-align:center">
+        <div style="font-weight:800;font-size:9px">ULTRA STRENG</div>
+        <div style="color:#5a6070;margin-top:2px;line-height:1.4">Alles geblokkeerd<br>Max privacy</div>
+      </div>
+      <div onclick="wmTemplate('basis-analytics',this)" id="wmt-basis-analytics" style="padding:8px;background:#0c0e10;border:1px solid #2a2d35;cursor:pointer;font-size:8px;color:#8a8e98;text-align:center">
+        <div style="font-weight:800;font-size:9px">BASIS</div>
+        <div style="color:#5a6070;margin-top:2px;line-height:1.4">GA4 door<br>Ads geblokkeerd</div>
+      </div>
+      <div onclick="wmTemplate('marketing-light',this)" id="wmt-marketing-light" style="padding:8px;background:#0c0e10;border:1px solid #2a2d35;cursor:pointer;font-size:8px;color:#8a8e98;text-align:center">
+        <div style="font-weight:800;font-size:9px">MARKETING</div>
+        <div style="color:#5a6070;margin-top:2px;line-height:1.4">GA4+Meta<br>Cookies gestript</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="wm-err2" style="display:none;padding:7px 10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#f87171;font-size:10px;margin-bottom:10px"></div>
+
+
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="wmBack()" style="padding:12px 16px;background:transparent;border:1px solid #2a2d35;color:#8a8e98;font-family:inherit;font-size:10px;cursor:pointer">&#x2190; Terug</button>
+      <button id="wm-btn" onclick="wmSubmit()" style="flex:1;padding:12px;background:#00ff9d;color:#0c0e10;font-family:inherit;font-size:11px;font-weight:800;letter-spacing:.08em;border:none;cursor:pointer">
+        >> DOOR NAAR BETALING
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<div id="wm-s1c" style="display:none;padding:16px 20px">
+
+  <div style="font-size:9px;color:#5a6070;letter-spacing:.1em;margin-bottom:8px">STAP 3 VAN 3 — TRACKER CONFIGURATIE</div>
+
+  <!-- Stats bar -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:12px">
+    <div style="background:#0c0e10;border:1px solid #1e2026;padding:8px;text-align:center">
+      <div style="font-size:16px;font-weight:800;color:#f87171" id="tc-block">0</div>
+      <div style="font-size:7px;color:#5a6070;letter-spacing:.06em">GEBLOKKEERD</div>
+    </div>
+    <div style="background:#0c0e10;border:1px solid #1e2026;padding:8px;text-align:center">
+      <div style="font-size:16px;font-weight:800;color:#f5c400" id="tc-strip">0</div>
+      <div style="font-size:7px;color:#5a6070;letter-spacing:.06em">GESTRIPT</div>
+    </div>
+    <div style="background:#0c0e10;border:1px solid #1e2026;padding:8px;text-align:center">
+      <div style="font-size:16px;font-weight:800;color:var(--g,#00ff9d)" id="tc-allow">0</div>
+      <div style="font-size:7px;color:#5a6070;letter-spacing:.06em">DOORGELATEN</div>
+    </div>
+    <div style="background:#0c0e10;border:1px solid #1e2026;padding:8px;text-align:center">
+      <div style="font-size:16px;font-weight:800;color:#a78bfa" id="tc-custom">0</div>
+      <div style="font-size:7px;color:#5a6070;letter-spacing:.06em">CUSTOM</div>
+    </div>
+  </div>
+
+  <!-- Categorie filters -->
+  <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:10px">
+    <button onclick="tcFilter('all',this)" id="tcf-all" style="padding:3px 8px;font-family:inherit;font-size:8px;background:rgba(0,255,157,.06);border:1px solid rgba(0,255,157,.3);color:#00ff9d;cursor:pointer;letter-spacing:.04em">Alles</button>
+    <button onclick="tcFilter('advertising',this)" id="tcf-advertising" style="padding:3px 8px;font-family:inherit;font-size:8px;background:#0c0e10;border:1px solid #2a2d35;color:#5a6070;cursor:pointer">&#x1F4E2; Advertising</button>
+    <button onclick="tcFilter('analytics',this)" id="tcf-analytics" style="padding:3px 8px;font-family:inherit;font-size:8px;background:#0c0e10;border:1px solid #2a2d35;color:#5a6070;cursor:pointer">&#x1F4CA; Analytics</button>
+    <button onclick="tcFilter('social',this)" id="tcf-social" style="padding:3px 8px;font-family:inherit;font-size:8px;background:#0c0e10;border:1px solid #2a2d35;color:#5a6070;cursor:pointer">&#x1F4F1; Social</button>
+    <button onclick="tcFilter('consent',this)" id="tcf-consent" style="padding:3px 8px;font-family:inherit;font-size:8px;background:#0c0e10;border:1px solid #2a2d35;color:#5a6070;cursor:pointer">&#x1F512; Consent</button>
+    <button onclick="tcFilter('custom',this)" id="tcf-custom" style="padding:3px 8px;font-family:inherit;font-size:8px;background:#0c0e10;border:1px solid rgba(167,139,250,.3);color:#a78bfa;cursor:pointer">+ Custom</button>
+  </div>
+
+  <!-- Zoek -->
+  <input type="text" oninput="tcSearch(this.value)" placeholder="Zoek tracker..." style="width:100%;padding:7px 10px;background:#0c0e10;border:1px solid #2a2d35;color:#e2e4e8;font-family:inherit;font-size:10px;outline:none;margin-bottom:8px">
+
+  <!-- Template snelkeuze -->
+  <div style="display:flex;gap:4px;margin-bottom:8px">
+    <span style="font-size:8px;color:#5a6070;align-self:center">SNEL:</span>
+    <button onclick="tcTemplate('ultra-streng')" style="padding:3px 8px;font-family:inherit;font-size:8px;background:#0c0e10;border:1px solid #2a2d35;color:#8a8e98;cursor:pointer">&#x26D4; Streng</button>
+    <button onclick="tcTemplate('basis-analytics')" style="padding:3px 8px;font-family:inherit;font-size:8px;background:#0c0e10;border:1px solid #2a2d35;color:#8a8e98;cursor:pointer">~ Basis</button>
+    <button onclick="tcTemplate('marketing-light')" style="padding:3px 8px;font-family:inherit;font-size:8px;background:#0c0e10;border:1px solid #2a2d35;color:#8a8e98;cursor:pointer">&gt; Marketing</button>
+  </div>
+
+  <!-- Tracker lijst -->
+  <div id="tc-list" style="max-height:280px;overflow-y:auto;border:1px solid #1e2026;margin-bottom:10px"></div>
+
+  <!-- Custom domain toevoegen -->
+  <div style="border:1px solid #1e2026;padding:10px;margin-bottom:10px;background:#0c0e10">
+    <div style="font-size:8px;color:#5a6070;letter-spacing:.08em;margin-bottom:6px">+ EIGEN DOMEIN TOEVOEGEN</div>
+    <div style="display:flex;gap:4px">
+      <input type="text" id="tc-custom-domain" placeholder="bijv. tracker.mijnpartner.nl" style="flex:1;padding:6px 8px;background:#111214;border:1px solid #2a2d35;color:#e2e4e8;font-family:inherit;font-size:10px;outline:none">
+      <select id="tc-custom-action" style="padding:6px;background:#111214;border:1px solid #2a2d35;color:#e2e4e8;font-family:inherit;font-size:9px;outline:none">
+        <option value="block">BLOCK</option>
+        <option value="strip">STRIP</option>
+        <option value="allow">ALLOW</option>
+      </select>
+      <button onclick="tcAddCustom()" style="padding:6px 12px;background:#00ff9d;color:#0c0e10;font-family:inherit;font-size:9px;font-weight:800;border:none;cursor:pointer">+</button>
+    </div>
+    <div id="tc-custom-list" style="margin-top:6px;display:flex;flex-direction:column;gap:3px"></div>
+  </div>
+
+  <div style="display:flex;gap:8px">
+    <button onclick="tcBack()" style="padding:10px 14px;background:transparent;border:1px solid #2a2d35;color:#8a8e98;font-family:inherit;font-size:10px;cursor:pointer">&#x2190; Terug</button>
+    <button onclick="wmSubmit()" style="flex:1;padding:10px;background:#00ff9d;color:#0c0e10;font-family:inherit;font-size:11px;font-weight:800;letter-spacing:.08em;border:none;cursor:pointer">>> DOOR NAAR BETALING</button>
+  </div>
+
+</div>
 
 <div id="wm-s2" style="display:none;padding:32px 20px;text-align:center">
   <div style="font-size:20px;color:#00ff9d;margin-bottom:12px" id="wm-spin">⟳</div>
@@ -660,6 +747,38 @@ function wmPlan(plan,el){
   ["starter","pro","business"].forEach(function(p){var d=document.getElementById("wmp-"+p);if(!d)return;if(p===plan){d.style.background="rgba(0,255,157,.06)";d.style.borderColor="rgba(0,255,157,.3)";d.style.color="#00ff9d";}else{d.style.background="#0c0e10";d.style.borderColor="#2a2d35";d.style.color="#8a8e98";}});
   var tb=document.getElementById("wmp-test");if(tb){tb.style.background="#0c0e10";tb.style.borderColor="rgba(245,196,0,.25)";tb.style.color="#f5c400";}
   var t=document.getElementById("wm-plan");if(t)t.textContent=labels[plan]||plan.toUpperCase();
+}
+function wmStep1Next() {
+  var email = (document.getElementById('wm-email')||{}).value || '';
+  var terms = document.getElementById('wm-terms') && document.getElementById('wm-terms').checked;
+  if (!email || email.indexOf('@') < 1) {
+    showWmErr('Vul een geldig e-mailadres in.');
+    return;
+  }
+  if (!terms) {
+    showWmErr('Accepteer de verwerkingsvoorwaarden om door te gaan.');
+    return;
+  }
+  document.getElementById('wm-err').style.display = 'none';
+  document.getElementById('wm-s1').style.display = 'none';
+  document.getElementById('wm-s1b').style.display = 'block';
+  // Update modal title
+  var t = document.getElementById('wm-plan');
+  if (t) t.textContent = 'CONFIGURATIE';
+}
+function wmBack() {
+  document.getElementById('wm-s1b').style.display = 'none';
+  document.getElementById('wm-s1').style.display = 'block';
+}
+var _wmTemplate = 'ultra-streng';
+function wmTemplate(tpl, el) {
+  _wmTemplate = tpl;
+  ['ultra-streng','basis-analytics','marketing-light'].forEach(function(t) {
+    var d = document.getElementById('wmt-'+t);
+    if (!d) return;
+    if (t === tpl) { d.style.background='rgba(0,255,157,.06)'; d.style.borderColor='rgba(0,255,157,.3)'; d.style.color='#00ff9d'; }
+    else { d.style.background='#0c0e10'; d.style.borderColor='#2a2d35'; d.style.color='#8a8e98'; }
+  });
 }
 function wmSelectTest(){
   _wmp="test";
@@ -755,7 +874,7 @@ async function wmSubmit() {
     var r = await fetch('https://wall.paramant.app/api/auth/register', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email: email, plan: _wmp, acceptTerms: terms, domain: (document.getElementById('wm-domain')||{}).value||''})
+      body: JSON.stringify({email: email, plan: _wmp, acceptTerms: true, domain: (document.getElementById('wm-domain')||{}).value||'', template: _wmTemplate, trackerConfig: tcConfig, customTrackers: tcCustom})
     });
     var d;
     try { d = await r.json(); } catch(pe) { throw new Error('Server antwoord onleesbaar.'); }
@@ -788,5 +907,143 @@ function showWmErr(msg) {
   if (e) { e.style.display = 'block'; e.textContent = '[!] ' + msg; }
 }
 function openModal(plan) { wmOpen(plan); }
+
+// ── Tracker Configuratie State ────────────────────────────
+var TC_TRACKERS = [
+  {key:'ga4',name:'Google Analytics 4',vendor:'Google',cat:'analytics',def:'strip',cookies:['_ga','_gid','_gat']},
+  {key:'hotjar',name:'Hotjar',vendor:'Hotjar',cat:'analytics',def:'block',cookies:['_hjid']},
+  {key:'mixpanel',name:'Mixpanel',vendor:'Mixpanel',cat:'analytics',def:'block',cookies:['mp_']},
+  {key:'amplitude',name:'Amplitude',vendor:'Amplitude',cat:'analytics',def:'block',cookies:[]},
+  {key:'segment',name:'Segment',vendor:'Twilio',cat:'analytics',def:'block',cookies:['ajs_user_id']},
+  {key:'chartbeat',name:'Chartbeat',vendor:'Chartbeat',cat:'analytics',def:'block',cookies:['_cb']},
+  {key:'comscore',name:'Comscore',vendor:'comScore',cat:'analytics',def:'block',cookies:['UID']},
+  {key:'ms_clarity',name:'Microsoft Clarity',vendor:'Microsoft',cat:'analytics',def:'block',cookies:['_clck']},
+  {key:'fullstory',name:'FullStory',vendor:'FullStory',cat:'analytics',def:'block',cookies:['fs_uid']},
+  {key:'datadog',name:'Datadog RUM',vendor:'Datadog',cat:'analytics',def:'block',cookies:[]},
+  {key:'heap',name:'Heap Analytics',vendor:'Contentsquare',cat:'analytics',def:'block',cookies:['_hp2_id']},
+  {key:'hubspot',name:'HubSpot Analytics',vendor:'HubSpot',cat:'analytics',def:'block',cookies:['hubspotutk']},
+  {key:'meta_pixel',name:'Meta Pixel',vendor:'Meta',cat:'advertising',def:'block',cookies:['_fbp','_fbc']},
+  {key:'google_ads',name:'Google Ads',vendor:'Google',cat:'advertising',def:'block',cookies:['IDE','ANID']},
+  {key:'tiktok',name:'TikTok Pixel',vendor:'ByteDance',cat:'advertising',def:'block',cookies:['_ttp']},
+  {key:'linkedin_ads',name:'LinkedIn Insight',vendor:'Microsoft',cat:'advertising',def:'block',cookies:['li_sugr']},
+  {key:'microsoft_ads',name:'Microsoft Ads',vendor:'Microsoft',cat:'advertising',def:'block',cookies:['_uetsid']},
+  {key:'criteo',name:'Criteo',vendor:'Criteo',cat:'advertising',def:'block',cookies:['cto_bundle']},
+  {key:'taboola',name:'Taboola',vendor:'Taboola',cat:'advertising',def:'block',cookies:[]},
+  {key:'outbrain',name:'Outbrain',vendor:'Outbrain',cat:'advertising',def:'block',cookies:['obuid']},
+  {key:'amazon_ads',name:'Amazon Advertising',vendor:'Amazon',cat:'advertising',def:'block',cookies:['ad-id']},
+  {key:'pinterest',name:'Pinterest Tag',vendor:'Pinterest',cat:'advertising',def:'block',cookies:[]},
+  {key:'snapchat',name:'Snapchat Pixel',vendor:'Snap',cat:'advertising',def:'block',cookies:['_scid']},
+  {key:'reddit_ads',name:'Reddit Pixel',vendor:'Reddit',cat:'advertising',def:'block',cookies:[]},
+  {key:'twitter_x',name:'X (Twitter) Pixel',vendor:'X Corp.',cat:'social',def:'block',cookies:['guest_id']},
+  {key:'onetrust',name:'OneTrust',vendor:'OneTrust',cat:'consent',def:'allow',cookies:['OptanonConsent']},
+  {key:'cookiebot',name:'Cookiebot',vendor:'Usercentrics',cat:'consent',def:'allow',cookies:['CookieConsent']},
+  {key:'didomi',name:'Didomi',vendor:'Didomi',cat:'consent',def:'allow',cookies:['euconsent-v2']},
+  {key:'sentry',name:'Sentry',vendor:'Sentry',cat:'utilities',def:'allow',cookies:[]},
+  {key:'intercom',name:'Intercom',vendor:'Intercom',cat:'utilities',def:'strip',cookies:['intercom-id-']},
+  {key:'zendesk',name:'Zendesk',vendor:'Zendesk',cat:'utilities',def:'allow',cookies:[]},
+];
+var TC_TEMPLATES = {
+  'ultra-streng': {ga4:'strip',hotjar:'block',mixpanel:'block',amplitude:'block',segment:'block',chartbeat:'block',comscore:'block',ms_clarity:'block',fullstory:'block',datadog:'block',heap:'block',hubspot:'block',meta_pixel:'block',google_ads:'block',tiktok:'block',linkedin_ads:'block',microsoft_ads:'block',criteo:'block',taboola:'block',outbrain:'block',amazon_ads:'block',pinterest:'block',snapchat:'block',reddit_ads:'block',twitter_x:'block',onetrust:'allow',cookiebot:'allow',didomi:'allow',sentry:'allow',intercom:'strip',zendesk:'allow'},
+  'basis-analytics': {ga4:'strip',hotjar:'strip',ms_clarity:'strip',meta_pixel:'block',google_ads:'block',tiktok:'block',linkedin_ads:'block'},
+  'marketing-light': {ga4:'strip',meta_pixel:'strip',google_ads:'strip',hotjar:'block',fullstory:'block',tiktok:'block'},
+};
+var tcConfig = {};
+var tcCustom = [];
+var tcActiveFilter = 'all';
+var tcSearchTerm = '';
+
+TC_TRACKERS.forEach(function(t){ tcConfig[t.key] = t.def; });
+
+function tcShow() {
+  document.getElementById('wm-s1b').style.display = 'none';
+  document.getElementById('wm-s1c').style.display = 'block';
+  var t = document.getElementById('wm-plan'); if(t) t.textContent = 'TRACKER CONFIGURATIE';
+  tcRender();
+}
+function tcBack() {
+  document.getElementById('wm-s1c').style.display = 'none';
+  document.getElementById('wm-s1b').style.display = 'block';
+  var t = document.getElementById('wm-plan'); if(t) t.textContent = 'CONFIGURATIE';
+}
+function tcFilter(f, btn) {
+  tcActiveFilter = f;
+  document.querySelectorAll('[id^="tcf-"]').forEach(function(b){
+    b.style.background='#0c0e10'; b.style.borderColor='#2a2d35'; b.style.color='#5a6070';
+  });
+  if(btn){ btn.style.background='rgba(0,255,157,.06)'; btn.style.borderColor='rgba(0,255,157,.3)'; btn.style.color='#00ff9d'; }
+  tcRender();
+}
+function tcSearch(v){ tcSearchTerm=v.toLowerCase(); tcRender(); }
+function tcTemplate(tpl) {
+  var t = TC_TEMPLATES[tpl]; if(!t) return;
+  Object.assign(tcConfig, t); tcRender();
+}
+function tcSetAction(key, action) {
+  tcConfig[key] = action; tcRender();
+}
+function tcAddCustom() {
+  var d = (document.getElementById('tc-custom-domain')||{}).value||''; d=d.trim();
+  var a = (document.getElementById('tc-custom-action')||{}).value||'block';
+  if(!d) return;
+  tcCustom.push({domain:d,action:a});
+  document.getElementById('tc-custom-domain').value='';
+  tcRender();
+}
+function tcRemoveCustom(i){ tcCustom.splice(i,1); tcRender(); }
+function tcRender() {
+  // Filter trackers
+  var list = TC_TRACKERS.filter(function(t){
+    if(tcActiveFilter==='custom') return false;
+    if(tcActiveFilter!=='all' && t.cat!==tcActiveFilter) return false;
+    if(tcSearchTerm && t.name.toLowerCase().indexOf(tcSearchTerm)<0 && t.vendor.toLowerCase().indexOf(tcSearchTerm)<0) return false;
+    return true;
+  });
+  var ACT_COLORS = {block:'#f87171',strip:'#f5c400',allow:'#00ff9d'};
+  var ACT_BG = {block:'rgba(239,68,68,.08)',strip:'rgba(245,196,0,.08)',allow:'rgba(0,255,157,.06)'};
+  var html = list.map(function(t){
+    var act = tcConfig[t.key]||t.def;
+    return '<div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:7px 10px;border-bottom:1px solid #1e2026;gap:8px">'+
+      '<div><div style="font-size:10px;font-weight:600;color:#e2e4e8">'+t.name+'</div>'+
+      '<div style="font-size:8px;color:#5a6070">'+t.vendor+' &middot; '+t.cat+(t.cookies.length?' &middot; '+t.cookies.slice(0,2).join(', '):'')+'</div></div>'+
+      '<div style="display:flex;gap:2px">'+
+      ['block','strip','allow'].map(function(a){
+        var active=act===a;
+        return '<button onclick="tcSetAction(''+t.key+'',''+a+'')" style="padding:3px 7px;font-family:inherit;font-size:8px;letter-spacing:.04em;border:1px solid '+(active?ACT_COLORS[a]:'#2a2d35')+';background:'+(active?ACT_BG[a]:'#0c0e10')+';color:'+(active?ACT_COLORS[a]:'#5a6070')+';cursor:pointer">'+a.toUpperCase()+'</button>';
+      }).join('')+
+      '</div></div>';
+  }).join('');
+  // Custom items
+  if(tcActiveFilter==='custom'||tcActiveFilter==='all') {
+    var cl = tcCustom.map(function(c,i){
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid #1e2026">'+
+        '<div style="font-size:10px;color:#e2e4e8">'+c.domain+'</div>'+
+        '<div style="display:flex;gap:4px;align-items:center">'+
+        '<span style="font-size:8px;padding:2px 6px;background:rgba(167,139,250,.08);color:#a78bfa">'+c.action.toUpperCase()+'</span>'+
+        '<button onclick="tcRemoveCustom('+i+')" style="background:transparent;border:none;color:#5a6070;cursor:pointer;font-size:12px">&times;</button>'+
+        '</div></div>';
+    }).join('');
+    if(cl) html += '<div style="background:rgba(167,139,250,.04)">'+cl+'</div>';
+  }
+  var el = document.getElementById('tc-list'); if(el) el.innerHTML = html||'<div style="padding:20px;text-align:center;font-size:10px;color:#3d4149">Geen trackers gevonden</div>';
+  // Custom list under add form
+  var cl2 = document.getElementById('tc-custom-list');
+  if(cl2) cl2.innerHTML = tcCustom.map(function(c,i){
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:#111214;border:1px solid #1e2026;font-size:9px">'+
+      '<span style="color:#e2e4e8">'+c.domain+'</span>'+
+      '<div style="display:flex;gap:6px;align-items:center"><span style="color:#a78bfa">'+c.action+'</span>'+
+      '<button onclick="tcRemoveCustom('+i+')" style="background:transparent;border:none;color:#5a6070;cursor:pointer">&times;</button></div></div>';
+  }).join('');
+  // Stats
+  var vals = Object.values(tcConfig);
+  document.getElementById('tc-block').textContent = vals.filter(function(v){return v==='block';}).length;
+  document.getElementById('tc-strip').textContent = vals.filter(function(v){return v==='strip';}).length;
+  document.getElementById('tc-allow').textContent = vals.filter(function(v){return v==='allow';}).length;
+  document.getElementById('tc-custom').textContent = tcCustom.length;
+}
+// Sla config op bij wmSubmit
+var _origWmSubmit = null;
+document.addEventListener('DOMContentLoaded', function(){
+  // Zorg dat tcConfig wordt meegestuurd
+});
 </script>
 </html>
