@@ -890,23 +890,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 200);
   }
   
-  var str  = document.getElementById('wm-str');
-  if (pass && str) {
-    pass.addEventListener('input', function() {
-      var v = this.value, s = 0;
-      if (v.length >= 8) s++;
-      if (/[A-Z]/.test(v)) s++;
-      if (/[0-9]/.test(v)) s++;
-      if (/[^A-Za-z0-9]/.test(v)) s++;
-      str.style.width = (s * 25) + '%';
-      var c = ['#2a2d35','#ef4444','#f5c400','#00cc7a','#00ff9d'];
-      str.style.background = c[s] || c[0];
-    });
-  }
-  var modal = document.getElementById('wm');
-  if (modal) {
-    modal.addEventListener('click', function(e) { if (e.target === this) wmClose(); });
-  }
+
   document.addEventListener('keydown', function(e) { if (e.key === 'Escape') wmClose(); });
   var rb = document.getElementById('register-btn');
   if (rb) rb.addEventListener('click', function() { wmOpen('starter'); });
