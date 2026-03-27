@@ -172,6 +172,20 @@ app.use(function(req, res, next) {
   next();
 });
 
+// ── Veilige IP extractie — vertrouw alleen X-Real-IP van Nginx ──
+// X-Forwarded-For kan door clients gespoofed worden — nooit direct vertrouwen
+function getClientIP(req) {
+  // X-Real-IP wordt door Nginx gezet — niet door de client aanpasbaar
+  return req.headers['x-real-ip'] || req.socket.remoteAddress || '0.0.0.0';
+}
+
+// Jitter helper — voorkomt timing attacks op recover/gdpr endpoints
+function randomJitter(minMs, maxMs) {
+  return new Promise(function(resolve) {
+    setTimeout(resolve, minMs + Math.random() * (maxMs - minMs));
+  });
+}
+
 // ── Redis + PostgreSQL ────────────────────────────────────────────
 const redis = Redis.createClient({
   url: process.env.REDIS_URL || 'redis://localhost:6379',
@@ -454,7 +468,7 @@ app.post('/api/auth/register', async function(req, res) {
   }
 
   // IP rate limit: max 3/uur
-  const ip     = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || '';
+  const ip     = getClientIP(req);
   const ipHash = sha256(ip).slice(0, 20);
   const ipKey  = 'reg_rl:' + ipHash;
   const ipCnt  = parseInt(await redis.get(ipKey).catch(function(){ return 0; })) || 0;
@@ -628,7 +642,7 @@ app.get('/api/success-data', async function(req, res) {
     }
   }
 
-  const ip = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+  const ip = getClientIP(req);
   if (!await rateLimit('succ:' + anonymizeIP(ip), 30, 60)) {
     logSecurityEvent('rate_limit_hit', {}).catch(function(){});
   return res.status(429).json({ error: 'rate_limit' });
@@ -725,7 +739,7 @@ app.post('/api/auth/login', async function(req, res) {
   const email = validateEmail(req.body && req.body.email);
   if (!email) return res.status(400).json({ error: 'invalid_email' });
 
-  const ip = req.headers['x-real-ip'] || req.socket.remoteAddress || '';
+  const ip = getClientIP(req);
   if (!await rateLimit('login:' + anonymizeIP(ip), 5, 900)) {
     logSecurityEvent('rate_limit_hit', {}).catch(function(){});
   return res.status(429).json({ error: 'rate_limit' });
@@ -1143,7 +1157,7 @@ setInterval(flushStatsBuf, 5000);
 // GA4 proxy
 app.all('/proxy/ga4', requireCustomer, async function(req, res) {
   const { customer, apiKey } = req;
-  const ip = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || '';
+  const ip = getClientIP(req);
 
   const query = {};
   ['v','tid','gtm','en','ep','sid','sct','seg','dl','dr','dt']
@@ -1185,7 +1199,7 @@ app.all('/proxy/ga4', requireCustomer, async function(req, res) {
 // Meta proxy
 app.all('/proxy/meta', requireCustomer, async function(req, res) {
   const { customer } = req;
-  const ip = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || '';
+  const ip = getClientIP(req);
 
   const query = {};
   ['id','ev'].forEach(function(p) { if (req.query[p]) query[p] = String(req.query[p]).slice(0, 200); });
@@ -1237,7 +1251,7 @@ app.get('/api/trackers', function(req, res) {
 
 app.post('/api/gdpr/delete', async function(req, res) {
   // Rate limit: max 3 per uur per IP
-  const gdprIp = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+  const gdprIp = getClientIP(req);
   const gdprKey = 'gdpr_rl:' + require('crypto').createHash('sha256').update(gdprIp).digest('hex').slice(0,16);
   const gdprCount = parseInt(await redisGet(gdprKey) || 0) || 0;
   if (gdprCount >= 3) {
@@ -1304,7 +1318,7 @@ app.all('/proxy/generic', requireCustomer, async function(req, res) {
   if (!origUrl) return res.json({ ok: true, action: 'dropped', reason: 'no_original_url' });
 
   // Check tracker config voor dit domein
-  const ip = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || '';
+  const ip = getClientIP(req);
   const ipHash = sha256(ip + new Date().toISOString().slice(0,10) + (process.env.IP_SALT||'wall')).slice(0,16);
 
   // Strip PII uit query string
@@ -1362,6 +1376,9 @@ app.post('/api/auth/recover', async function(req, res) {
   const rlCnt     = parseInt(await redisGet(rlKey) || 0) || 0;
   if (rlCnt >= 5) return res.status(429).json({ error: 'rate_limit', retry_after: 900 });
   await redisSet(rlKey, String(rlCnt + 1), 900);
+
+  // Jitter: voorkomt timing attack (gelijke responstijd of email bestaat of niet)
+  await randomJitter(50, 200);
 
   // Check of email bestaat (geen enumeration — altijd 200)
   const userRow = await pg.query(
