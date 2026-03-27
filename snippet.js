@@ -1,5 +1,5 @@
 /**
- * PARAMANT WALL — snippet.js v3.5.0
+ * PARAMANT WALL — snippet.js v3.6.0
  * ─────────────────────────────────────────────────────────────────
  * Next-level privacy interceptor
  *
@@ -10,6 +10,9 @@
  *   + WebWorker constructor proxy (blokkeert tracker workers)
  *   + Integrity self-check interval (60 sec)
  *   + Betere queue: IndexedDB als localStorage fallback
+ *   + Fail-open met 800ms timeout (v3.6.0)
+ *   + Startup health check (v3.6.0)
+ *   + Bypass bij Wall offline (v3.6.0)
  *   + SRI hash exposed via window.__WALL__.integrity
  *   + Version check via /api/version
  *   + beforeunload flush (synchrone fallback)
@@ -24,10 +27,11 @@
 
   // ── Config ────────────────────────────────────────────────────
   var WALL_URL  = 'https://wall.paramant.app';
-  var VERSION   = '3.5.0';
+  var VERSION   = '3.6.0';
   var MAX_QUEUE = 30;
   var MAX_RETRY = 3;
   var RETRY_MS  = 800;
+  var TIMEOUT_MS = 800;  // Fail-open na 800ms
   var CHECK_INT = 60000; // Integrity check elke 60 sec
 
   var API_KEY = (function() {
@@ -118,19 +122,29 @@
   var _origImport = W.__proto__ && typeof W.__proto__.import === 'function' ? W.__proto__.import : null;
 
   // ── Fetch met retry + queue ────────────────────────────────────
+  // Timeout wrapper: als Wall niet antwoordt binnen TIMEOUT_MS → fail-open
+  function withTimeout(promise, ms) {
+    var timeout = new Promise(function(_, reject) {
+      setTimeout(function() { reject(new Error('wall_timeout')); }, ms);
+    });
+    return Promise.race([promise, timeout]);
+  }
+
   function wallFetch(body, attempt) {
     attempt = attempt || 1;
-    return _origFetch.call(W, ep(), {
+    var fetchPromise = _origFetch.call(W, ep(), {
       method: 'POST',
       body: body || null,
       keepalive: true,
       credentials: 'omit',
       headers: { 'x-wall-key': API_KEY, 'x-wall-v': VERSION, 'content-type': 'application/octet-stream' },
-    }).then(function(r) {
+    });
+    return withTimeout(fetchPromise, TIMEOUT_MS).then(function(r) {
       _wallOk = true;
       return r;
     }).catch(function(e) {
       _wallOk = false;
+      safeDispatch('wall-offline', { reason: e.message });
       if (attempt < MAX_RETRY) {
         return new Promise(function(resolve) {
           setTimeout(function() { resolve(wallFetch(body, attempt + 1)); }, RETRY_MS * attempt * attempt);
@@ -155,10 +169,18 @@
     if (!shouldIntercept(url)) return _origFetch.apply(this, arguments);
     _stats.blocked++;
     safeDispatch('blocked', { url: url.split('?')[0], via: 'fetch' });
+    // Fail-open: als Wall offline is, stuur direct door (privacy valt weg maar site werkt)
+    if (!_wallOk) {
+      safeDispatch('fail-open', { url: url.split('?')[0] });
+      return _origFetch.apply(this, arguments);
+    }
     var safeInit = { credentials: 'omit', headers: { 'x-wall-key': API_KEY, 'x-wall-v': VERSION } };
     if (init && init.body) safeInit.body = init.body;
     if (init && init.method) safeInit.method = init.method;
-    return wallFetch(safeInit.body).catch(function(){});
+    return wallFetch(safeInit.body).catch(function(){
+      // Als wallFetch faalt, fail-open
+      return _origFetch.apply(W, [input, init]);
+    });
   }
 
   try {
@@ -223,9 +245,15 @@
       if (!shouldIntercept(url)) return _origBeacon(url, data);
       _stats.blocked++;
       safeDispatch('blocked', { url: String(url).split('?')[0], via: 'beacon' });
+      if (!_wallOk) {
+        safeDispatch('fail-open', { via: 'beacon' });
+        return _origBeacon(url, data);
+      }
       try { return _origBeacon(ep(), data); }
       catch(e) {
-        wallFetch(data).catch(function(){});
+        wallFetch(data).catch(function(){
+          try { _origBeacon(url, data); } catch(e2) {}
+        });
         return true;
       }
     };
@@ -367,6 +395,19 @@
         }
       }
     }
+  });
+
+  // ── 11a. Startup health check ────────────────────────────────
+  // Test bij init of Wall bereikbaar is, zet _wallOk correct
+  withTimeout(
+    _origFetch.call(W, WALL_URL + '/health', { credentials: 'omit', method: 'HEAD' }),
+    TIMEOUT_MS
+  ).then(function(r) {
+    _wallOk = r.ok;
+    if (!r.ok) safeDispatch('wall-offline', { reason: 'health-check-failed' });
+  }).catch(function() {
+    _wallOk = false;
+    safeDispatch('wall-offline', { reason: 'health-check-timeout' });
   });
 
   // ── 11. Version check (silent) ────────────────────────────────
