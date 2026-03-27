@@ -78,10 +78,13 @@ async function cleanPendingAccounts() {
       "DELETE FROM pending_accounts WHERE created_at < NOW() - INTERVAL '2 hours' AND (payment_processed IS NULL OR payment_processed=false) RETURNING email"
     );
     if (r.rows.length > 0) {
-      console.log('[WALL] pending_cleanup: verwijderd', r.rows.length, 'verlopen pending accounts');
+      // Cleanup verlopen view_tokens (A07 — geen accumulation)
+      await pg.query("DELETE FROM view_tokens WHERE expires_at < NOW() - INTERVAL '1 hour'").catch(function(){});
+      // Cleanup gebruikte magic_links
+      await pg.query("DELETE FROM magic_links WHERE used=true OR expires_at < NOW() - INTERVAL '1 hour'").catch(function(){});
     }
   } catch(e) {
-    console.error('[WALL] pending_cleanup error:', e.code || e.message.slice(0,40));
+    console.error('[WALL:ERR] pending_cleanup error:', e.code || e.message.slice(0,40));
   }
 }
 // Run elke 15 minuten
@@ -192,7 +195,7 @@ const redis = Redis.createClient({
   socket: {
     reconnectStrategy: function(retries) {
       if (retries > 20) {
-        console.error('[WALL] Redis: max retries bereikt — offline mode');
+        console.error('[WALL:ERR] Redis: max retries bereikt — offline mode');
         return new Error('Redis max retries');
       }
       return Math.min(retries * 200, 5000); // max 5 sec tussen pogingen
@@ -203,12 +206,12 @@ const redis = Redis.createClient({
 
 redis.on('error', function(e) {
   if (!e.message.includes('ECONNREFUSED')) return; // stil voor bekende fouten
-  console.error('[WALL] Redis error:', e.message);
+  console.error('[WALL:ERR] Redis error:', e.message);
 });
 redis.on('reconnecting', function() { console.warn('[WALL] Redis: herverbinden...'); });
 redis.on('ready', function() { console.log('[WALL] Redis: verbonden'); });
 
-redis.connect().catch(function(e) { console.error('[WALL] Redis connect:', e.message); });
+redis.connect().catch(function(e) { console.error('[WALL:ERR] Redis connect:', e.message); });
 
 // Helper: safe redis get met fallback
 async function redisGet(key) {
@@ -234,13 +237,13 @@ const pg = new Pool({
 });
 // Pool error handler (voorkomt crash bij DB disconnect)
 pg.on('error', function(err) {
-  console.error('[WALL] PG pool error:', err.code || err.message.slice(0,40));
+  console.error('[WALL:ERR] PG pool error:', err.code || err.message.slice(0,40));
 });
 
 // ── Session token ─────────────────────────────────────────────────
 const SESSION_SECRET = process.env.SESSION_SECRET;
 if (!SESSION_SECRET) {
-  console.error('[WALL] FATAL: SESSION_SECRET not set');
+  console.error('[WALL:ERR] FATAL: SESSION_SECRET not set');
 }
 
 function createToken(userId) {
@@ -326,7 +329,7 @@ async function ensureTables() {
       );
     `);
   } catch(e) {
-    console.error('[WALL] ensureTables:', e.message);
+    console.error('[WALL:ERR] ensureTables:', e.message);
   }
 }
 ensureTables();
@@ -340,16 +343,14 @@ async function activateAccount({ email, plan, domain, stripeCustomerId, stripeSu
       [email]
     );
     if (existing.rows.length > 0) {
-      console.log('[WALL] activateAccount: al actief voor', email, '- skip');
-    await logSecurityEvent('key_activated', {reason:'duplicate_skipped'});
+          await logSecurityEvent('key_activated', {reason:'duplicate_skipped'});
       return { ok: true, skipped: true };
     }
     const pend = await pg.query(
       'SELECT payment_processed FROM pending_accounts WHERE email=$1 LIMIT 1', [email]
     );
     if (pend.rows.length > 0 && pend.rows[0].payment_processed) {
-      console.log('[WALL] activateAccount: al processed voor', email, '- skip');
-      return { ok: true, skipped: true };
+            return { ok: true, skipped: true };
     }
     await pg.query(
       'UPDATE pending_accounts SET payment_processed=true, processed_at=NOW() WHERE email=$1', [email]
@@ -509,11 +510,10 @@ app.post('/api/auth/register', async function(req, res) {
       allow_promotion_codes: true,
     });
 
-    console.log('[WALL] Stripe session created for', email.slice(0,4) + '***', 'plan:', plan);
-    return res.json({ ok: true, checkout_url: session.url });
+        return res.json({ ok: true, checkout_url: session.url });
   } catch(e) {
-    console.error('[WALL] Stripe session error:', e.message.slice(0, 80));
-    return res.status(500).json({ error: 'stripe_error' });
+    console.error('[WALL:ERR] Stripe session error:', e.message.slice(0, 80));
+    return res.status(500).json({ error: 'payment_error' });
   }
 });
 
@@ -524,7 +524,7 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch(e) {
-    console.error('[WALL] Webhook sig invalid:', e.message.slice(0, 60));
+    console.error('[WALL:ERR] Webhook sig invalid:', e.message.slice(0, 60));
     return res.status(400).json({ error: 'invalid_signature' });
   }
 
@@ -544,8 +544,7 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
       [email]
     );
     if (existing.rows.length > 0) {
-      console.log('[WALL] Webhook: user al actief voor', email.slice(0,4)+'***');
-      return res.json({ ok: true, skipped: 'already_active' });
+            return res.json({ ok: true, skipped: 'already_active' });
     }
 
     try {
@@ -558,9 +557,8 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
         customTrackers:   meta.custom_trackers,
       });
       await logSecurityEvent('key_activated', { plan, ipHash: '' }).catch(function(){});
-      console.log('[WALL] Webhook: account geactiveerd voor', email.slice(0,4)+'***');
-    } catch(e) {
-      console.error('[WALL] Webhook activateAccount error:', e.message.slice(0, 80));
+          } catch(e) {
+      console.error('[WALL:ERR] Webhook activateAccount error:', e.message.slice(0, 80));
     }
   }
 
@@ -576,8 +574,7 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
         [email]
       ).catch(function(){ return { rows: [] }; });
       for (const fr of feedRows.rows) { await deleteFeedData(fr.feed_hash); }
-      console.log('[WALL] Subscription cancelled for', email.slice(0,4)+'***');
-    }
+          }
   }
 
   return res.json({ ok: true });
@@ -637,7 +634,7 @@ app.get('/api/success-data', async function(req, res) {
         return res.status(402).json({ error: 'payment_not_completed', status: session.payment_status });
       }
     } catch(e) {
-      console.error('[WALL] Stripe session verify error:', e.message.slice(0,50));
+      console.error('[WALL:ERR] Stripe session verify error:', e.message.slice(0,50));
       // Niet blokkeren bij Stripe API fout - ga door met DB check
     }
   }
@@ -698,7 +695,7 @@ app.get('/api/success-data', async function(req, res) {
         });
       }
     } catch(e) {
-      console.error('[WALL] success-data error:', e.message);
+      console.error('[WALL:ERR] success-data error:', e.message);
     }
     return res.status(404).json({ error: 'not_found', msg: 'Account nog niet actief. Ververs de pagina.' });
   }
@@ -822,7 +819,7 @@ app.get('/api/feed/:hash', async function(req, res) {
       }
     });
   } catch(e) {
-    console.error('[WALL] feed error:', e.code || e.message.slice(0,40));
+    console.error('[WALL:ERR] feed error:', e.code || e.message.slice(0,40));
     return res.status(500).json({ error: 'feed_error' });
   }
 });
@@ -948,7 +945,7 @@ app.post('/api/auth/rotate-key', async function(req, res) {
       message: 'Oude key direct ongeldig. Update snippet.js op je website.'
     });
   } catch(e) {
-    console.error('[WALL] Key rotation error:', e.message);
+    console.error('[WALL:ERR] Key rotation error:', e.message);
     return res.status(500).json({ error: 'rotation_failed' });
   }
 });
@@ -1009,7 +1006,7 @@ async function sendEmail(to, subject, html) {
     console.log('[WALL] Email verzonden via Postmark:', subject, '->', to.slice(0,4)+'***');
     return true;
   } catch(e) {
-    console.error('[WALL] Postmark error:', e.message.slice(0,80));
+    console.error('[WALL:ERR] Postmark error:', e.message.slice(0,80));
     return false;
   }
 }
@@ -1147,7 +1144,7 @@ async function flushStatsBuf() {
       );
     }
   } catch(e) {
-    console.error('[WALL] flushStats error:', e.code || e.message.slice(0,40));
+    console.error('[WALL:ERR] flushStats error:', e.code || e.message.slice(0,40));
   } finally {
     if (client) client.release();
   }
@@ -1229,6 +1226,34 @@ app.get('/snippet.js', function(req, res) {
 
 
 // ── Static files ──────────────────────────────────────────────────
+// ── Security middleware ──────────────────────────────────────────
+// Prototype pollution bescherming
+app.use(function(req, res, next) {
+  if (req.body) {
+    const dangerous = ['__proto__', 'constructor', 'prototype'];
+    function sanitizeObj(obj) {
+      if (typeof obj !== 'object' || obj === null) return;
+      dangerous.forEach(function(k) { delete obj[k]; });
+      Object.values(obj).forEach(function(v) { if (typeof v === 'object') sanitizeObj(v); });
+    }
+    sanitizeObj(req.body);
+  }
+  next();
+});
+
+// Path traversal bescherming op query params
+app.use(function(req, res, next) {
+  const url = req.url || '';
+  if (url.includes('..') || url.includes('%2e%2e') || url.includes('%252e')) {
+    return res.status(400).json({ error: 'invalid_path' });
+  }
+  // Blokkeer null bytes
+  if (url.includes('%00') || url.includes('\0')) {
+    return res.status(400).json({ error: 'invalid_path' });
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/privacy',  function(req, res) { res.sendFile(path.join(__dirname, 'public', 'privacy.html')); });
 app.get('/recover', function(req, res) { res.sendFile(path.join(__dirname, 'public', 'recover.html')); });
@@ -1261,8 +1286,12 @@ async function validateCSRF(req, res, next) {
 app.get('/cancel',   function(req, res) { res.sendFile(path.join(__dirname, 'public', 'cancel.html')); });
 
 // ── Health / Stats ────────────────────────────────────────────────
-app.get('/api/trackers', function(req, res) {
-  // Geeft de volledige tracker database + templates terug
+app.get('/api/trackers', async function(req, res) {
+  // Rate limit: max 30/uur per IP
+  const trkKey = 'trackers_rl:' + sha256(getClientIP(req)).slice(0, 16);
+  const trkCnt = parseInt(await redisGet(trkKey) || 0) || 0;
+  if (trkCnt > 30) return res.status(429).json({ error: 'rate_limit' });
+  await redisSet(trkKey, String(trkCnt + 1), 3600);
   res.json({
     ok: true,
     trackers: BUILT_IN_TRACKERS,
@@ -1333,7 +1362,7 @@ app.post('/api/gdpr/delete', async function(req, res) {
     }
     return res.json({ ok: true, message: 'Account verwijderd. Alle persoonsgegevens zijn gewist.' });
   } catch(e) {
-    console.error('[WALL] GDPR delete error:', e.code || e.message.slice(0, 50));
+    console.error('[WALL:ERR] GDPR delete error:', e.code || e.message.slice(0, 50));
     return res.status(500).json({ error: 'delete_failed' });
   }
 });
@@ -1509,7 +1538,7 @@ app.get('/api/gdpr/confirm', async function(req, res) {
       </body></html>
     `);
   } catch(e) {
-    console.error('[WALL] GDPR confirm error:', e.message);
+    console.error('[WALL:ERR] GDPR confirm error:', e.message);
     return res.status(500).send('<h2>Er ging iets mis. Neem contact op via privacy@paramant.app</h2>');
   }
 });
@@ -1537,6 +1566,11 @@ app.get('/api/auth/recover', async function(req, res) {
 
 
 
+// Waarschuw als ADMIN_TOKEN niet geconfigureerd is
+if (!process.env.ADMIN_TOKEN) {
+  console.warn('[WALL] WAARSCHUWING: ADMIN_TOKEN niet ingesteld — /stats endpoint is geblokkeerd');
+}
+
 app.get('/api/version', function(req, res) {
   res.setHeader('Cache-Control', 'public, max-age=3600');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -1549,30 +1583,10 @@ app.get('/api/version', function(req, res) {
 });
 
 app.get('/health', function(req, res) {
-  res.json({ ok: true, version: VERSION, ts: new Date().toISOString() });
+  res.json({ ok: true });
 });
 
-app.get('/stats', async function(req, res) {
-  try {
-    const r1 = await pg.query('SELECT COUNT(*) as customers FROM customers WHERE enabled=true');
-    const r2 = await pg.query('SELECT SUM(requests) as reqs, SUM(blocked) as blocked, SUM(stripped) as stripped, SUM(allowed) as allowed FROM usage_monthly');
-    const r3 = await pg.query('SELECT month, SUM(requests) as reqs, SUM(blocked) as blocked FROM usage_monthly GROUP BY month ORDER BY month DESC LIMIT 6');
-    return res.json({
-      ok: true,
-      active_customers: parseInt(r1.rows[0].customers)||0,
-      totals: {
-        requests: parseInt(r2.rows[0].reqs)||0,
-        blocked:  parseInt(r2.rows[0].blocked)||0,
-        stripped: parseInt(r2.rows[0].stripped)||0,
-        allowed:  parseInt(r2.rows[0].allowed)||0,
-      },
-      timeline: r3.rows.map(function(r){ return { month: r.month, requests: parseInt(r.reqs)||0, blocked: parseInt(r.blocked)||0 }; }),
-      ts: new Date().toISOString()
-    });
-  } catch(e) {
-    return res.json({ ok: true, active_customers: 0, totals: {requests:0,blocked:0,stripped:0,allowed:0}, timeline: [], ts: new Date().toISOString() });
-  }
-});
+app.get('/stats', function(req, res) { return res.status(404).json({ error: 'not_found' }); });
 
 
 app.use(function(req, res) { res.status(404).json({ error: 'not_found' }); });
