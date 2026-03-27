@@ -173,8 +173,39 @@ app.use(function(req, res, next) {
 });
 
 // ── Redis + PostgreSQL ────────────────────────────────────────────
-const redis = Redis.createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
+const redis = Redis.createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379',
+  socket: {
+    reconnectStrategy: function(retries) {
+      if (retries > 20) {
+        console.error('[WALL] Redis: max retries bereikt — offline mode');
+        return new Error('Redis max retries');
+      }
+      return Math.min(retries * 200, 5000); // max 5 sec tussen pogingen
+    },
+    connectTimeout: 3000,
+  }
+});
+
+redis.on('error', function(e) {
+  if (!e.message.includes('ECONNREFUSED')) return; // stil voor bekende fouten
+  console.error('[WALL] Redis error:', e.message);
+});
+redis.on('reconnecting', function() { console.warn('[WALL] Redis: herverbinden...'); });
+redis.on('ready', function() { console.log('[WALL] Redis: verbonden'); });
+
 redis.connect().catch(function(e) { console.error('[WALL] Redis connect:', e.message); });
+
+// Helper: safe redis get met fallback
+async function redisGet(key) {
+  try { return await redis.get(key); } catch(e) { return null; }
+}
+async function redisSet(key, val, ttl) {
+  try { return ttl ? await redis.setEx(key, ttl, val) : await redis.set(key, val); } catch(e) { return null; }
+}
+async function redisIncr(key) {
+  try { return await redis.incr(key); } catch(e) { return 1; } // fail-open: geen rate limit
+}
 
 const pg = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -792,7 +823,7 @@ app.get('/feed/:hash', function(req, res) {
 async function getCustomer(apiKey) {
   if (!apiKey || !/^wk_[a-f0-9]{48}$/.test(apiKey)) return null;
   const cacheKey = 'wk:' + sha256(apiKey);
-  const cached   = await redis.get(cacheKey).catch(() => null);
+  const cached = await redisGet(cacheKey);
   if (cached) { try { return JSON.parse(cached); } catch { return null; } }
   try {
     const r = await pg.query(
@@ -803,7 +834,7 @@ async function getCustomer(apiKey) {
       [apiKey]
     );
     if (!r.rows.length) return null;
-    await redis.setEx(cacheKey, 60, JSON.stringify(r.rows[0])).catch(() => {});
+    await redisSet(cacheKey, JSON.stringify(r.rows[0]), 60);
     return r.rows[0];
   } catch { return null; }
 }
@@ -1216,7 +1247,7 @@ app.post('/api/auth/recover', async function(req, res) {
   // Rate limit: max 3 recovery attempts per uur per email
   const emailHash = sha256(email).slice(0, 20);
   const rlKey     = 'recover_rl:' + emailHash;
-  const rlCnt     = parseInt(await redis.get(rlKey).catch(function(){ return 0; })) || 0;
+  const rlCnt     = parseInt(await redisGet(rlKey) || 0) || 0;
   if (rlCnt >= 3) return res.status(429).json({ error: 'rate_limit', retry_after: 3600 });
   await redis.setEx(rlKey, 3600, String(rlCnt + 1)).catch(function(){});
 
