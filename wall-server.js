@@ -868,6 +868,12 @@ app.get('/api/trackers', function(req, res) {
 });
 
 app.post('/api/gdpr/delete', async function(req, res) {
+  // Rate limit: max 3 per uur per IP
+  const gdprIp = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+  const gdprKey = 'gdpr_rl:' + require('crypto').createHash('sha256').update(gdprIp).digest('hex').slice(0,16);
+  const gdprCount = parseInt(await redis.get(gdprKey).catch(function(){ return 0; })) || 0;
+  if (gdprCount >= 3) return res.status(429).json({ error: 'rate_limit', retry_after: 3600 });
+  await redis.setEx(gdprKey, 3600, String(gdprCount + 1)).catch(function(){});
   const { email, apiKey } = req.body || {};
   if (!email && !apiKey) return res.status(400).json({ error: 'email_or_key_required' });
   try {
@@ -926,38 +932,7 @@ app.get('/stats', async function(req, res) {
   }
 });
 
-app.get('/stats_old_placeholder',
-  try {
-    const r = await pg.query(
-      'SELECT COALESCE(SUM(requests),0) as total, COALESCE(SUM(blocked),0) as blocked, COALESCE(SUM(stripped),0) as stripped FROM usage_monthly'
-    );
-    const d = r.rows[0] || {};
-    res.json({ ok: true, version: VERSION, requests: +d.total||0, blocked: +d.blocked||0, stripped: +d.stripped||0 });
-  } catch {
-    res.json({ ok: true, version: VERSION });
-  }
-});
 
-// ── Email helpers ─────────────────────────────────────────────────
-async function sendActivationEmail({ email, viewLink, feedUrl, plan, wasReplaced }) {
-  // Gebruik nodemailer of SMTP als geconfigureerd
-  // Voor nu: log de link (productie: vervang met echte mailer)
-
-  // TODO: implementeer SMTP via process.env.SMTP_HOST etc.
-}
-
-async function sendMagicLinkEmail(email, link) {
-
-  // TODO: implementeer SMTP
-}
-
-// ── Cleanup ───────────────────────────────────────────────────────
-setInterval(async function() {
-  await pg.query('DELETE FROM pending_accounts WHERE expires_at < NOW() AND completed_at IS NULL').catch(() => {});
-  await pg.query('DELETE FROM view_tokens WHERE expires_at < NOW()').catch(() => {});
-}, 10 * 60 * 1000);
-
-// ── 404 + Error handler ───────────────────────────────────────────
 app.use(function(req, res) { res.status(404).json({ error: 'not_found' }); });
 app.use(function(err, req, res, next) { res.status(500).json({ error: 'internal_error' }); });
 
