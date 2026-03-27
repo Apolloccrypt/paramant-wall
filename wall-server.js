@@ -344,188 +344,137 @@ async function activateAccount({ email, plan, domain, stripeCustomerId, stripeSu
 // STAP 1: REGISTER — email + terms → pending + Stripe checkout
 // ══════════════════════════════════════════════════════════════════
 app.post('/api/auth/register', async function(req, res) {
-  const ip   = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
-  const aip  = anonymizeIP(ip);
+  const body     = req.body || {};
+  const email    = (body.email    || '').toLowerCase().trim();
+  const plan     = (body.plan     || 'starter').trim();
+  const domain   = (body.domain   || '').trim();
+  const template = (body.template || 'ultra-streng').trim();
 
-  if (!await rateLimit('reg:' + aip, 5, 3600)) {
-    logSecurityEvent('rate_limit_hit', {}).catch(function(){});
-  return res.status(429).json({ error: 'rate_limit', msg: 'Te veel pogingen. Probeer later.' });
+  // Validatie
+  if (!email || email.indexOf('@') < 1 || email.length > 200) {
+    return res.status(400).json({ error: 'invalid_email' });
+  }
+  if (!body.acceptTerms) {
+    return res.status(400).json({ error: 'terms_required' });
   }
 
-  const email = validateEmail(req.body && req.body.email);
-  const plan  = ['starter','pro','business','test'].includes(req.body && req.body.plan) ? req.body.plan : 'starter';
-  const terms = req.body && (req.body.acceptTerms === true || req.body.terms === true);
-  const tpl   = req.body && req.body.template || 'ultra-streng';
-  const domain = (req.body && req.body.domain || '').toString().slice(0, 253);
+  // IP rate limit: max 3/uur
+  const ip     = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || '';
+  const ipHash = sha256(ip).slice(0, 20);
+  const ipKey  = 'reg_rl:' + ipHash;
+  const ipCnt  = parseInt(await redis.get(ipKey).catch(function(){ return 0; })) || 0;
+  if (ipCnt >= 3) return res.status(429).json({ error: 'rate_limit', retry_after: 3600 });
+  await redis.setEx(ipKey, 3600, String(ipCnt + 1)).catch(function(){});
 
-  if (!email) return res.status(400).json({ error: 'invalid_email', msg: 'Ongeldig e-mailadres.' });
-  if (!terms)  return res.status(400).json({ error: 'terms_required', msg: 'Accepteer de voorwaarden.' });
-
-  // Check voor bestaande open sessie
-  try {
-    const existing = await pg.query(
-      `SELECT stripe_session FROM pending_accounts
-       WHERE email = $1 AND completed_at IS NULL AND expires_at > NOW()
-       ORDER BY created_at DESC LIMIT 1`,
-      [email]
-    );
-    if (existing.rows.length && existing.rows[0].stripe_session) {
-      const stripeKey = process.env.STRIPE_SECRET_KEY;
-      if (stripeKey) {
-        try {
-          const stripe = require('stripe')(stripeKey);
-          const sess = await stripe.checkout.sessions.retrieve(existing.rows[0].stripe_session);
-          if (sess.status === 'open') {
-            return res.json({ ok: true, checkout_url: sess.url, resuming: true });
-          }
-          // Sessie expired of betaald - verwijder pending en maak nieuwe
-          await pg.query('UPDATE pending_accounts SET expires_at = NOW() WHERE stripe_session = $1', [existing.rows[0].stripe_session]);
-        } catch(_) {}
-      }
-    }
-  } catch(_) {}
-
-  // Maak Stripe checkout aan
-  const stripeKey = process.env.STRIPE_SECRET_KEY;
-  if (!stripeKey) {
-    // DEV mode: activeer direct
-    try {
-      const result = await activateAccount({ email, plan, domain: '', wasReplaced: false });
-      return res.json({
-        ok: true,
-        dev_mode: true,
-        view_token: result.viewToken,
-        msg: 'Dev mode: account aangemaakt zonder betaling.',
-      });
-    } catch(e) {
-      return res.status(500).json({ error: 'server_error', msg: e.message });
-    }
-  }
-
-  const prices = {
+  // Plan → Stripe price
+  const PRICES = {
     starter:  process.env.STRIPE_PRICE_STARTER,
     pro:      process.env.STRIPE_PRICE_PRO,
     business: process.env.STRIPE_PRICE_BUSINESS,
     test:     process.env.STRIPE_PRICE_TEST,
   };
+  const priceId = PRICES[plan];
+  if (!priceId) return res.status(400).json({ error: 'invalid_plan' });
 
-  if (!prices[plan]) {
-    return res.status(400).json({ error: 'invalid_plan' });
-  }
-
+  // GEEN DB INSERT — alles gaat via Stripe metadata
+  // User wordt pas aangemaakt NA succesvolle betaling in de webhook
   try {
-    const stripe  = require('stripe')(stripeKey);
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      mode:                 'subscription',
-      line_items:           [{ price: prices[plan], quantity: 1 }],
-      customer_email:       email,
-      metadata:             { email, plan, template: tpl, domain },
-      success_url:          BASE + '/success?s={CHECKOUT_SESSION_ID}',
-      cancel_url:           BASE + '/cancel',
-      locale:               'nl',
+      payment_method_types: ['card', 'ideal', 'sepa_debit'],
+      mode: 'subscription',
+      line_items: [{ price: priceId, quantity: 1 }],
+      customer_email: email,
+      success_url: (process.env.BASE_URL || 'https://wall.paramant.app') + '/success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url:  (process.env.BASE_URL || 'https://wall.paramant.app') + '/cancel',
+      metadata: {
+        email:           email,
+        plan:            plan,
+        domain:          domain.slice(0, 500),
+        template:        template,
+        tracker_config:  JSON.stringify(body.trackerConfig  || {}).slice(0, 3000),
+        custom_trackers: JSON.stringify(body.customTrackers || []).slice(0, 1000),
+      },
+      subscription_data: {
+        metadata: { email, plan, domain: domain.slice(0, 500), template }
+      },
+      allow_promotion_codes: true,
     });
 
-    // Sla pending op
-    await pg.query(
-      `INSERT INTO pending_accounts (email, plan, stripe_session, expires_at)
-       VALUES ($1, $2, $3, NOW() + INTERVAL '2 hours')`,
-      [email, plan, session.id]
-    );
-
+    console.log('[WALL] Stripe session created for', email.slice(0,4) + '***', 'plan:', plan);
     return res.json({ ok: true, checkout_url: session.url });
   } catch(e) {
-    console.error('[WALL] Stripe error:', e.message);
-    return res.status(500).json({ error: 'stripe_error', msg: 'Betaalpagina kon niet worden aangemaakt.' });
+    console.error('[WALL] Stripe session error:', e.message.slice(0, 80));
+    return res.status(500).json({ error: 'stripe_error' });
   }
 });
 
-// ══════════════════════════════════════════════════════════════════
-// STAP 2: STRIPE WEBHOOK — na succesvolle betaling
-// ══════════════════════════════════════════════════════════════════
-// Stripe webhook — ondersteunt beide URL patronen
+
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async function(req, res) {
-  return handleStripeWebhook(req, res);
-});
-
-async function handleStripeWebhook(req, res) {
-  const sig    = req.headers['stripe-signature'];
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!secret) return res.status(500).json({ error: 'webhook_not_configured' });
-
+  const sig = req.headers['stripe-signature'];
   let event;
   try {
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-    event = stripe.webhooks.constructEvent(req.body, sig, secret);
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch(e) {
-    // Signature check failed - log voor debug maar verwerk toch als body parsable is
-    // Dit is tijdelijk om te debuggen - na fix weer strict maken
-    try {
-      const body = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : JSON.stringify(req.body);
-      event = JSON.parse(body);
-      if (!event.type) return res.status(400).json({ error: 'invalid_signature' });
-    } catch(_) {
-      return res.status(400).json({ error: 'invalid_signature' });
-    }
+    console.error('[WALL] Webhook sig invalid:', e.message.slice(0, 60));
+    return res.status(400).json({ error: 'invalid_signature' });
   }
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
-    const { email, plan, template, domain } = session.metadata || {};
+    const meta    = session.metadata || {};
+    const email   = meta.email || session.customer_email || '';
+    const plan    = meta.plan  || 'starter';
+    const domain  = meta.domain || '';
+    const template = meta.template || 'ultra-streng';
 
-    if (email && plan) {
-      try {
-        const wasReplaced = !!(await pg.query(
-          'SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL',
-          [email]
-        )).rows.length;
+    if (!email) return res.json({ ok: true, skipped: 'no_email' });
 
-        const result = await activateAccount({
-          email, plan,
-          domain: domain || '',
-          stripeCustomerId: session.customer,
-          stripeSubId: session.subscription,
-          wasReplaced,
-        });
+    // Idempotency: check of user al bestaat
+    const existing = await pg.query(
+      'SELECT c.id, c.api_key FROM customers c JOIN users u ON u.id=c.user_id WHERE u.email=$1 AND c.enabled=true LIMIT 1',
+      [email]
+    );
+    if (existing.rows.length > 0) {
+      console.log('[WALL] Webhook: user al actief voor', email.slice(0,4)+'***');
+      return res.json({ ok: true, skipped: 'already_active' });
+    }
 
-        // Markeer pending als voltooid
-        await pg.query(
-          'UPDATE pending_accounts SET completed_at = NOW() WHERE stripe_session = $1',
-          [session.id]
-        );
-
-        // Stuur activatiemail
-        await sendActivationEmail({
-          email,
-          viewLink: BASE + '/success?view=' + result.viewToken,
-          feedUrl:  BASE + '/feed/' + result.feedHash,
-          plan,
-          wasReplaced: result.wasReplaced,
-        });
-
-      } catch(e) {
-        console.error('[WALL] Webhook activatie error:', e.code || e.message.slice(0,50));
-      }
+    try {
+      await activateAccount({
+        email, plan, domain,
+        stripeCustomerId: session.customer,
+        stripeSubId:      session.subscription,
+        template,
+        trackerConfig:    meta.tracker_config,
+        customTrackers:   meta.custom_trackers,
+      });
+      await logSecurityEvent('key_activated', { plan, ipHash: '' }).catch(function(){});
+      console.log('[WALL] Webhook: account geactiveerd voor', email.slice(0,4)+'***');
+    } catch(e) {
+      console.error('[WALL] Webhook activateAccount error:', e.message.slice(0, 80));
     }
   }
 
   if (event.type === 'customer.subscription.deleted') {
-    const sub = event.data.object;
-    if (sub.metadata && sub.metadata.email) {
+    const sub   = event.data.object;
+    const email = sub.metadata && sub.metadata.email;
+    if (email) {
       await pg.query(
-        `UPDATE customers SET enabled = false
-         WHERE user_id IN (SELECT id FROM users WHERE email = $1)`,
-        [sub.metadata.email]
-      ).catch(() => {});
+        'UPDATE customers SET enabled=false WHERE user_id IN (SELECT id FROM users WHERE email=$1)', [email]
+      ).catch(function(){});
+      const feedRows = await pg.query(
+        'SELECT p.feed_hash FROM projects p JOIN customers c ON c.id=p.customer_id_ref JOIN users u ON u.id=c.user_id WHERE u.email=$1',
+        [email]
+      ).catch(function(){ return { rows: [] }; });
+      for (const fr of feedRows.rows) { await deleteFeedData(fr.feed_hash); }
+      console.log('[WALL] Subscription cancelled for', email.slice(0,4)+'***');
     }
   }
 
-  res.json({ received: true });
-}
+  return res.json({ ok: true });
+});
 
-// ══════════════════════════════════════════════════════════════════
-// STAP 3: SUCCESS PAGINA — na betaling terugkeer
-// ══════════════════════════════════════════════════════════════════
+
 app.get('/success', async function(req, res) {
   // Via Stripe redirect: ?s=session_id
   const sessionId  = req.query.s;
@@ -1173,6 +1122,81 @@ app.all('/proxy/generic', requireCustomer, async function(req, res) {
 
   return res.json({ ok: true, action: 'processed' });
 });
+
+
+app.post('/api/auth/recover', async function(req, res) {
+  const email = ((req.body || {}).email || '').toLowerCase().trim();
+  if (!email || email.indexOf('@') < 1) return res.status(400).json({ error: 'invalid_email' });
+
+  // Rate limit: max 3 recovery attempts per uur per email
+  const emailHash = sha256(email).slice(0, 20);
+  const rlKey     = 'recover_rl:' + emailHash;
+  const rlCnt     = parseInt(await redis.get(rlKey).catch(function(){ return 0; })) || 0;
+  if (rlCnt >= 3) return res.status(429).json({ error: 'rate_limit', retry_after: 3600 });
+  await redis.setEx(rlKey, 3600, String(rlCnt + 1)).catch(function(){});
+
+  // Check of email bestaat (geen enumeration — altijd 200)
+  const userRow = await pg.query(
+    'SELECT u.id, c.api_key FROM users u JOIN customers c ON c.user_id=u.id WHERE u.email=$1 AND c.enabled=true AND u.deleted_at IS NULL LIMIT 1',
+    [email]
+  ).catch(function(){ return { rows: [] }; });
+
+  if (userRow.rows.length > 0) {
+    // Genereer magic link token
+    const token     = require('crypto').randomBytes(32).toString('hex');
+    const tokenHash = sha256(token);
+    await pg.query(
+      "INSERT INTO magic_links (id, user_id, token_hash, expires_at, used) VALUES (gen_random_uuid(), , , NOW() + INTERVAL '15 minutes', false)",
+      [userRow.rows[0].id, tokenHash]
+    ).catch(function(){});
+
+    // Stuur email
+    if (typeof sendEmail === 'function') {
+      const link = 'https://wall.paramant.app/recover?token=' + token;
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="background:#0c0e10;color:#e2e4e8;font-family:monospace;padding:32px;max-width:520px;margin:0 auto">
+<div style="border:1px solid #1e2026;padding:28px">
+  <div style="font-size:16px;font-weight:800;color:#00ff9d;margin-bottom:16px">PARAMANT WALL</div>
+  <div style="font-size:12px;font-weight:700;color:#e2e4e8;margin-bottom:12px">Je API key recovery link</div>
+  <p style="font-size:11px;color:#8a8e98;line-height:1.8;margin-bottom:8px">
+    Klik op de knop om je API key op te halen.<br>
+    <strong style="color:#f5c400">Geldig: 15 minuten &middot; Eenmalig gebruik</strong>
+  </p>
+  <a href="${link}" style="display:inline-block;padding:12px 24px;background:#00ff9d;color:#0c0e10;font-weight:800;font-size:11px;text-decoration:none;letter-spacing:.06em;margin:16px 0">OPEN KEY RECOVERY &rarr;</a>
+  <p style="font-size:9px;color:#3d4149;margin-top:16px;border-top:1px solid #1e2026;padding-top:12px">
+    Niet aangevraagd? Negeer dit bericht.<br>
+    PARAMANT &middot; privacy@paramant.app
+  </p>
+</div></body></html>`;
+      await sendEmail(email, 'PARAMANT WALL — Je key recovery link', html);
+    }
+  }
+
+  // Altijd 200 (geen email enumeration)
+  return res.json({ ok: true, message: 'Als dit e-mailadres bekend is, ontvang je een link.' });
+});
+
+app.get('/api/auth/recover', async function(req, res) {
+  const token = (req.query.token || '').trim();
+  if (!token || token.length < 60) return res.status(400).json({ error: 'invalid_token' });
+
+  const tokenHash = sha256(token);
+  const row = await pg.query(
+    'SELECT ml.user_id, ml.used, ml.expires_at, c.api_key FROM magic_links ml JOIN customers c ON c.user_id=ml.user_id WHERE ml.token_hash=$1 AND c.enabled=true LIMIT 1',
+    [tokenHash]
+  ).catch(function(){ return { rows: [] }; });
+
+  if (!row.rows.length) return res.status(404).json({ error: 'token_not_found' });
+  const ml = row.rows[0];
+  if (ml.used) return res.status(410).json({ error: 'token_used' });
+  if (new Date(ml.expires_at) < new Date()) return res.status(410).json({ error: 'token_expired' });
+
+  // Markeer als gebruikt
+  await pg.query('UPDATE magic_links SET used=true WHERE token_hash=$1', [tokenHash]).catch(function(){});
+
+  return res.json({ ok: true, api_key: ml.api_key });
+});
+
 
 app.get('/health', function(req, res) {
   res.json({ ok: true, version: VERSION, ts: new Date().toISOString() });
