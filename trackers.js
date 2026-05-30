@@ -26,6 +26,87 @@ const BUILT_IN_TRACKERS = {
     cookies: ['_ga', '_gid'],
     stripFields: ['client_id', 'user_id'],
   },
+  // ── NL-kritisch: overheid & enterprise analytics ──────────────
+  // Default = STRIP (niet block): de klant houdt zijn analytics, maar Wall
+  // anonimiseert client_id/visitor_id, stript cookies en IP vóór forwarding.
+  piwik_pro: {
+    name: 'Piwik PRO',
+    vendor: 'Piwik PRO',
+    category: 'analytics',
+    defaultAction: 'strip',
+    // *.piwik.pro covert de per-tenant subdomeinen (bijv. logius.piwik.pro,
+    // <account>.piwik.pro) plus de losse collector- en CDN-hosts.
+    domains: ['piwik.pro', '.piwik.pro', 'piwikpro.com', 'piwik.app', '.containers.piwik.pro'],
+    cookies: ['_pk_id', '_pk_ses', '_pk_ref', '_pk_cvar', '_pk_hsr', 'ppms_privacy_', 'stg_traffic_source_priority', 'stg_last_interaction', 'stg_returning_visitor', 'stg_externalReferrer'],
+    // Piwik PRO/Matomo collect params die personen identificeren:
+    stripFields: ['_id', 'uid', 'cid', 'cip', 'token_auth', 'e_c', 'e_a', 'e_n', 'dimension1', 'dimension2', 'dimension3', 'pk_cid', 'res', 'ua', 'lang'],
+  },
+  matomo: {
+    name: 'Matomo (Piwik OSS)',
+    vendor: 'Matomo',
+    category: 'analytics',
+    defaultAction: 'strip',
+    domains: ['matomo.php', 'piwik.php', 'matomo.js', 'piwik.js', 'matomo.cloud', '.matomo.cloud'],
+    cookies: ['_pk_id', '_pk_ses', '_pk_ref', '_pk_cvar', '_pk_hsr', 'mtm_consent', 'mtm_cookie_consent'],
+    stripFields: ['_id', 'uid', 'cid', 'cip', 'token_auth', 'res', 'ua', 'lang', 'pk_cid'],
+  },
+  adobe_analytics: {
+    name: 'Adobe Analytics (Experience Cloud)',
+    vendor: 'Adobe',
+    category: 'analytics',
+    defaultAction: 'strip',
+    // Adobe AppMeasurement posts naar /b/ss/ op een per-klant RDC/edge host
+    // (*.sc.omtrdc.net, *.data.adobedc.net) + de Experience Cloud ID service.
+    domains: ['.sc.omtrdc.net', 'sc.omtrdc.net', '/b/ss/', 'data.adobedc.net', '.data.adobedc.net', 'adobedc.net', 'demdex.net', 'everesttech.net', 'adobe.com/b/ss'],
+    cookies: ['s_cc', 's_sq', 's_vi', 's_fid', 's_ecid', 'AMCV_', 'AMCVS_', 'mbox', 'mboxEdgeCluster', 'at_check'],
+    // AppMeasurement query/POST velden met PII of stabiele identifiers:
+    stripFields: ['vid', 'aid', 'mid', 'fid', 'c_ip', 'ip', 'aamlh', 'aamb', 'mcorgid', 'callback', 'd_cid', 'd_mid', 'email', 'eVar', 'pe'],
+  },
+  adobe_target: {
+    name: 'Adobe Target',
+    vendor: 'Adobe',
+    category: 'analytics',
+    defaultAction: 'strip',
+    domains: ['tt.omtrdc.net', '.tt.omtrdc.net'],
+    cookies: ['mbox', 'mboxEdgeCluster', 'at_check'],
+    stripFields: ['mboxMCGVID', 'mboxMCGLH', 'vst.', 'profile.'],
+  },
+  snowplow: {
+    name: 'Snowplow',
+    vendor: 'Snowplow',
+    category: 'analytics',
+    defaultAction: 'strip',
+    domains: ['/com.snowplowanalytics.snowplow/', 'collector.', 'snplow.', '/i?', 'sp.js', 'sp.pixel'],
+    cookies: ['_sp_id', '_sp_ses', 'sp'],
+    stripFields: ['uid', 'duid', 'sid', 'nuid', 'ip', 'eid', 'url', 'refr'],
+  },
+  tealium: {
+    name: 'Tealium',
+    vendor: 'Tealium',
+    category: 'analytics',
+    defaultAction: 'strip',
+    domains: ['tags.tiqcdn.com', 'collect.tealiumiq.com', '.tealiumiq.com', 'datacloud.tealiumiq.com'],
+    cookies: ['utag_main', 'trace_id'],
+    stripFields: ['tealium_visitor_id', 'uid', 'email', 'ut.visitor_id'],
+  },
+  contentsquare: {
+    name: 'Contentsquare / Hotjar Heatmaps',
+    vendor: 'Contentsquare',
+    category: 'analytics',
+    defaultAction: 'block',
+    domains: ['contentsquare.net', 't.contentsquare.net', 'c.contentsquare.net', 'cs.contentsquare.com'],
+    cookies: ['_cs_id', '_cs_s', '_cs_c', '_cs_ex'],
+    stripFields: ['uid', 'pid'],
+  },
+  economic_kvk: {
+    name: 'Economic / Visitor Queue (NL B2B)',
+    vendor: 'various',
+    category: 'analytics',
+    defaultAction: 'block',
+    domains: ['leadinfo.net', 'l.leadinfo.net', 'cdn.leadinfo.net', 'snitcher.com', 'app.snitcher.com'],
+    cookies: ['_li_id', 'leadinfo'],
+    stripFields: ['uid', 'company_id'],
+  },
   mixpanel: {
     name: 'Mixpanel',
     vendor: 'Mixpanel',

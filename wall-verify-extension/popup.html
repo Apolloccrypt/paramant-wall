@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Space+Mono:wght@400;700&display=swap');
+  :root{
+    --bg:#0a0e0d; --panel:#121a18; --line:#1f2c29; --ink:#e9f1ef; --muted:#73897f;
+    --ok:#3ddc97; --warn:#e8b84b; --bad:#e5604d; --neutral:#5b6b66;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:360px;background:var(--bg);color:var(--ink);font-family:'Space Mono',monospace}
+  .wrap{padding:0 0 16px}
+
+  /* verdict header */
+  .head{padding:22px 20px 18px;position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+  .head::after{content:'';position:absolute;inset:0;background:
+    linear-gradient(rgba(61,220,151,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(61,220,151,.05) 1px,transparent 1px);
+    background-size:26px 26px;pointer-events:none}
+  .brand{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+  .brand b{color:var(--ok)}
+  .vrow{display:flex;align-items:center;gap:14px;margin-top:12px;position:relative;z-index:1}
+  .shield{width:46px;height:46px;flex:none;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700}
+  .vtxt .t{font-family:'Fraunces',serif;font-size:21px;font-weight:600;line-height:1.1}
+  .vtxt .s{font-size:11px;color:var(--muted);margin-top:3px}
+  .host{margin-top:14px;font-size:12px;color:var(--ink);position:relative;z-index:1;word-break:break-all}
+  .host span{color:var(--muted)}
+
+  /* verdict color variants */
+  .protected   .shield{background:rgba(61,220,151,.14);color:var(--ok)}
+  .protected   .vtxt .t{color:var(--ok)}
+  .partial     .shield{background:rgba(232,184,75,.14);color:var(--warn)}
+  .partial     .vtxt .t{color:var(--warn)}
+  .unprotected .shield{background:rgba(229,96,77,.14);color:var(--bad)}
+  .unprotected .vtxt .t{color:var(--bad)}
+  .clean .shield,.unknown .shield{background:rgba(91,107,102,.14);color:var(--neutral)}
+  .clean .vtxt .t,.unknown .vtxt .t{color:var(--ink)}
+
+  section{padding:14px 20px 0}
+  h3{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+
+  .attest{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+  .arow{display:flex;align-items:center;gap:9px;font-size:12px;padding:4px 0}
+  .arow .dot{width:7px;height:7px;border-radius:50%;flex:none}
+  .dot.g{background:var(--ok)} .dot.y{background:var(--warn)} .dot.r{background:var(--bad)} .dot.n{background:var(--neutral)}
+  .arow .lab{color:var(--muted)} .arow .val{margin-left:auto;color:var(--ink)}
+
+  .feats{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .feat{font-size:10px;color:var(--ok);border:1px solid rgba(61,220,151,.3);border-radius:20px;padding:3px 9px}
+
+  .list{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .li{display:flex;align-items:center;gap:9px;font-size:12px;padding:9px 14px;border-bottom:1px solid var(--line)}
+  .li:last-child{border:0}
+  .li .tag{font-size:9px;padding:2px 7px;border-radius:5px;margin-left:auto;font-weight:700;letter-spacing:.5px}
+  .tag.leak{background:rgba(229,96,77,.16);color:var(--bad)}
+  .tag.wall{background:rgba(61,220,151,.16);color:var(--ok)}
+  .empty{font-size:12px;color:var(--muted);padding:11px 14px}
+
+  .foot{padding:14px 20px 0;font-size:10px;color:var(--muted);line-height:1.5}
+  .foot a{color:var(--ok);text-decoration:none}
+  .pulse{animation:p 1.4s infinite}@keyframes p{50%{opacity:.4}}
+</style>
+</head>
+<body>
+<div class="wrap" id="root">
+  <div class="head unknown" id="head">
+    <div class="brand">PARAMANT <b>WALL</b> · verifier</div>
+    <div class="vrow">
+      <div class="shield" id="shield">·</div>
+      <div class="vtxt">
+        <div class="t" id="vtitle">Checking…</div>
+        <div class="s" id="vsub">Observing this page's traffic</div>
+      </div>
+    </div>
+    <div class="host" id="host"><span>site</span> —</div>
+  </div>
+
+  <section>
+    <h3>Cryptographic attestation</h3>
+    <div class="attest" id="attest">
+      <div class="arow"><span class="dot n pulse"></span><span class="lab">Verifying signature…</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h3>Tracking observed on this page</h3>
+    <div class="list" id="trackers"><div class="empty">Watching…</div></div>
+  </section>
+
+  <div class="foot" id="foot">
+    This check is independent: it inspects the requests your browser actually
+    sends and verifies Wall's Ed25519 signature. The site cannot fake it.
+  </div>
+</div>
+<script src="popup.js"></script>
+</body>
+</html>

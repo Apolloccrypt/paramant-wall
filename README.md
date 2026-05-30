@@ -1,239 +1,112 @@
-# PARAMANT WALL — Developer README
+# PARAMANT WALL — v4.0
 
-> **Private repository. Proprietary software. All rights reserved.**
-> © 2026 PARAMANT — Do not distribute or reproduce without explicit written permission.
+> **Proprietary software. © 2026 PARAMANT.** Privacy proxy **+** first-party k-anonymous analytics.
 
----
-
-## What is PARAMANT WALL?
-
-PARAMANT WALL is a **privacy proxy SaaS** for website owners. It intercepts outbound browser tracking requests (analytics pixels, ad scripts, fingerprinting) before they leave the visitor's browser — replacing them with privacy-safe alternatives or dropping them entirely.
-
-**Value proposition in one line:**  
-Website owners subscribe to a plan. Their visitors are protected silently — no install, no awareness, no cost to the visitor.
+Cookies stripped · IP **CSPRNG**-anonymised · PII blocked · **no metric backed by fewer than k people** · zero logging.
 
 ---
 
-## Architecture Overview
+## What changed in v4.0
 
-```
-Visitor browser
-     │
-     ▼
-Cloudflare (DNS + TLS termination + WAF)
-     │
-     ▼
-Nginx (reverse proxy, port 443 → 127.0.0.1:4000)
-     │
-     ▼
-Node.js cluster (wall-server.js via cluster.js, 2 workers, port 4000)
-     │
-     ├── PostgreSQL (Docker container: wall-postgres)
-     ├── Redis (localhost, rate limiting + session cache)
-     └── Stripe (payment, SEPA/iDEAL flow)
-```
+v4.0 keeps the entire SaaS shell from v3.x (Stripe SEPA/iDEAL checkout, magic-link
+accounts, customer dashboard, live feed, GA4/Meta interception proxies, nginx +
+systemd + Postgres + Redis) and drops in **paramant-core** — the anonymisation
+engine that didn't exist when this project started.
 
-**Current version:** v4.1.3  
-**Runtime:** Node.js (cluster mode, 2 workers)  
-**Server:** Hetzner Helsinki — `37.27.180.206`  
-**App root:** `/opt/wall/`  
-**Service name:** `paramant-wall` (systemd)
+| Area | v3.x | v4.0 |
+|---|---|---|
+| Visitor anonymisation | `sha256(ip + "wall-2026-4-30")` — **predictable salt, brute-forceable** | CSPRNG salt, RAM-only, rotates every UTC midnight — **unreconstructable** |
+| IP handling | full IP hashed | coarsened to /24 (v4) or /48 (v6) **before** hashing |
+| UA | family string | `{browser-family / os-family}`, version entropy dropped |
+| Re-identification floor | none — a lone rare event could identify someone | **k-anonymity gate**: events held until >= k distinct visitors, sub-k buckets dropped |
+| First-party analytics | none (proxy only) | **native RAM-only analytics** through the same k-anon gate |
+| GA4 cid/client_id | hashed with the predictable salt | hashed with the core HMAC |
+| /api/version | broken dead-code (unbalanced if(false)) | fixed, returns real version |
+
+Nothing in the paying-customer flow changed. The motor underneath did.
 
 ---
 
-## Repository Structure
+## paramant-core (core/)
 
 ```
-paramant-wall/
-├── wall-server.js          # Main Express server — all routes, middleware, business logic
-├── cluster.js              # Node.js cluster bootstrap (spawns 2 workers)
-├── index.html              # Marketing/landing page + registration flow (single-file)
-├── privacy.html            # Privacy policy page
-├── config.html             # Customer dashboard / config interface
-├── feed.html               # Tracker feed / activity viewer
-├── recover.html            # Password / account recovery
-├── success.html            # Post-payment success page (Stripe redirect)
-├── cancel.html             # Post-payment cancel page (Stripe redirect)
-├── snippet.js              # The Wall snippet — injected by website owners into their site
-├── trackers.js             # Tracker definition database (what to block/replace)
-├── SECURITY_RISK_MATRIX.md # Internal security audit and risk documentation
-└── README.md               # This file
+core/
+  anonymizer.js   CSPRNG daily-rotating salt, /24 coarsening, PII + tracking-param scrub
+  kanon.js        k-anonymity release gate (buffer until >= k, else drop)
+  native.js       first-party RAM-only rolling aggregates (no disk, no event log)
+  index.js        createCore() — wires the three together for wall-server.js
 ```
 
----
+Each cluster worker holds its own RAM-only salt and buffers. Tokens only need to
+be consistent within a request's lifetime; k-anon buckets aggregate per worker.
 
-## Server Access
+### Guarantees (proven in test/privacy.test.js)
+- same visitor + same day => same token; different worker/day => different token
+- /24 neighbours collapse to one token; IPv6-mapped IPv4 normalised
+- salt rotation makes yesterday's tokens unreconstructable
+- emails / phones / IDs scrubbed from strings, URLs and payloads; gclid/fbclid/... stripped
+- k-anon gate buffers below k, flushes at k, drops sub-k buckets on sweep
+- native adapter exposes aggregates only — never raw events
 
 ```bash
-# SSH
-ssh -i ~/.ssh/id_wall root@37.27.180.206
-
-# App location
-cd /opt/wall/
-
-# Service management
-systemctl status paramant-wall
-systemctl restart paramant-wall
-systemctl stop paramant-wall
-
-# Live logs
-journalctl -u paramant-wall -f
-
-# Worker status (cluster)
-node cluster.js   # only run manually for testing; use systemd in prod
+npm test   # 9/9
 ```
 
 ---
 
-## Database
+## New endpoints
 
-### PostgreSQL
-Runs in Docker as `wall-postgres`.
+| Route | Purpose |
+|---|---|
+| POST /collect | Cookieless first-party beacon. Strips cookies/IP/PII, tokenises, k-anon gate, native store. Returns 204, never Set-Cookie. |
+| GET /api/native/state | Aggregate report + core diagnostics (salt fingerprint, k-anon buffer state). Aggregates only. |
+| GET /health | Now includes live core state. |
+
+The snippet (public/snippet.js v4.0) still intercepts outbound GA4/Meta trackers
+**and** now fires a cookieless first-party pageview to /collect. Custom events:
+
+```js
+window.wall('signup', { plan: 'pro' });   // props PII-scrubbed server-side
+```
+
+---
+
+## Run
 
 ```bash
-# Connect
-docker exec -it wall-postgres psql -U wall -d wall
-
-# Check container status
-docker ps | grep wall-postgres
+npm install
+# required env: DATABASE_URL, STRIPE_SECRET_KEY, SESSION_SECRET  (optional: REDIS_URL, WALL_K)
+WALL_K=5 npm start          # cluster mode (cluster.js -> 2 workers)
+node wall-server.js         # single process, for dev
 ```
 
-**Key tables:**
+Architecture unchanged from v3.x:
 
-| Table | Purpose |
-|-------|---------|
-| `users` | Account credentials, email, deletion tracking |
-| `customers` | Linked to users, holds `api_key`, `enabled` flag |
-| `projects` | Per-customer proxy projects with `feed_hash` |
-| `usage_monthly` | Aggregated request + blocked stats per month |
-| `magic_links` | Passwordless login tokens with expiry |
-| `pending_accounts` | Pre-payment registration state |
-| `view_tokens` | Dashboard session tokens |
-| `wall_configs` | Per-customer proxy configuration JSON |
+```
+browser -> Cloudflare (TLS/WAF) -> Nginx :443 -> Node cluster :4000
+                                                   |-- PostgreSQL (accounts, billing)
+                                                   |-- Redis (rate limit, feed)
+                                                   \-- Stripe (SEPA/iDEAL)
+```
 
-### Redis
-Runs on localhost. Used for rate limiting and session caching.
+Server: Hetzner. Service paramant-wall (systemd). App root /opt/wall/.
+Static assets now live in public/ (the server already sendFiles from there).
+
+---
+
+## Deploy (unchanged manual flow)
 
 ```bash
-redis-cli ping   # should return PONG
-redis-cli info   # full stats
+scp -r core public wall-server.js trackers.js cluster.js \
+  root@<server>:/opt/wall/
+ssh root@<server> "cd /opt/wall && npm install --omit=dev && systemctl restart paramant-wall"
+ssh root@<server> "journalctl -u paramant-wall -n 30"
 ```
 
----
-
-## Environment Variables
-
-These must be present in the runtime environment (systemd unit or `.env`):
-
-```
-DATABASE_URL          PostgreSQL connection string
-REDIS_URL             Redis connection string (default: localhost)
-STRIPE_SECRET_KEY     Stripe secret key (live)
-STRIPE_WEBHOOK_SECRET Stripe webhook signing secret
-POSTMARK_API_KEY      Transactional email (setup in progress)
-SESSION_SECRET        Express session secret
-DOMAIN                paramant.app
-```
-
----
-
-## Payment Flow (Stripe)
-
-- Integration: Stripe Checkout with **SEPA Direct Debit / iDEAL**
-- Flow: `index.html` → Stripe Checkout → `success.html` or `cancel.html`
-- Webhooks handled in `wall-server.js` — verify signature before processing
-- On successful payment: customer is activated (`customers.enabled = true`)
-
-⚠️ **Known production bug:** `doRegister` function is not defined in the production `index.html`. Registration via the UI is currently broken. Fix is pending — do not deploy registration-dependent features until this is resolved.
-
----
-
-## The Wall Snippet
-
-`snippet.js` is the client-side script that website owners embed on their site:
-
-```html
-<script src="https://wall.paramant.app/snippet.js?key=API_KEY"></script>
-```
-
-- Identifies the customer via `api_key`
-- Intercepts outbound requests matching patterns in `trackers.js`
-- Proxies or drops requests based on customer `wall_config`
-- Zero data retained — no visitor PII touches the WALL server
-
-`trackers.js` contains the tracker pattern database — add new tracker definitions here when expanding coverage.
-
----
-
-## Nginx Configuration
-
-Nginx sits in front of Node.js:
-
-```
-HTTPS :443 → 127.0.0.1:4000
-```
-
-Config location on server: `/etc/nginx/sites-available/paramant-wall`
-
-Cloudflare handles outer TLS. Nginx handles inner TLS (mTLS config in progress). Do not expose port 4000 directly — always route through Nginx.
-
----
-
-## Deployment Workflow
-
-There is no CI/CD pipeline yet. Deployments are manual:
-
-```bash
-# 1. Pull latest from local to server
-scp -i ~/.ssh/id_wall index.html privacy.html wall-server.js \
-  root@37.27.180.206:/opt/wall/
-
-# 2. Restart service
-ssh -i ~/.ssh/id_wall root@37.27.180.206 "systemctl restart paramant-wall"
-
-# 3. Verify
-ssh -i ~/.ssh/id_wall root@37.27.180.206 "journalctl -u paramant-wall -n 30"
-```
-
-**Backup convention:** Before any production edit, backup files to `/opt/wall/backup/` with timestamp suffix, e.g. `index-GOLDEN-20260327_0839.html`.
-
----
-
-## Email
-
-Transactional email is handled by **Postmark** (setup in progress — not yet live in production). Until Postmark is active, no automated emails are sent.
-
-Inbound privacy requests: `privacy@paramant.app` (Cloudflare Email Routing → personal inbox).
-
----
-
-## Security Notes
-
-See `SECURITY_RISK_MATRIX.md` for the full internal audit.
-
-Key points:
-- All API keys are stored hashed in PostgreSQL
-- `deleted_at` soft-delete pattern used on `users` table — always filter `WHERE deleted_at IS NULL`
-- Rate limiting via Redis on all public endpoints
-- Stripe webhook signatures must be verified before any state change
-- mTLS between Cloudflare and Nginx: configuration hardening in progress
-
----
-
-## Known Issues / Open TODOs
-
-| Priority | Item |
-|----------|------|
-| 🔴 Critical | `doRegister` not defined in production HTML — registration broken |
-| 🟠 High | Postmark SMTP setup not complete — no transactional email |
-| 🟠 High | Cloudflare/Nginx/mTLS hardening not finalized |
-| 🟡 Medium | No CI/CD pipeline — all deploys are manual SCP |
-| 🟡 Medium | Backup folder on server accumulates — no automated cleanup |
+Behind Cloudflare (orange cloud), Wall reads CF-IPCountry for coarse geo — the
+process itself never geolocates an IP.
 
 ---
 
 ## Contact
-
-**Mick Beer — Founder, PARAMANT**  
-privacy@paramant.app  
-Harderwijk, The Netherlands
+**Mick Beer — PARAMANT** · privacy@paramant.app · Harderwijk, NL

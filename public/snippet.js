@@ -1,5 +1,5 @@
 /**
- * PARAMANT WALL — snippet.js v3.6.0
+ * PARAMANT WALL — snippet.js v4.1.0 (Piwik PRO + Adobe strip)
  * ─────────────────────────────────────────────────────────────────
  * Next-level privacy interceptor
  *
@@ -27,7 +27,7 @@
 
   // ── Config ────────────────────────────────────────────────────
   var WALL_URL  = 'https://wall.paramant.app';
-  var VERSION   = '3.6.0';
+  var VERSION   = '4.2.0';
   var MAX_QUEUE = 30;
   var MAX_RETRY = 3;
   var RETRY_MS  = 800;
@@ -75,6 +75,15 @@
     /heapanalytics\.com/,/track\.hubspot\.com/,
     /pixel\.quantserve\.com/,/beacon\.scorecardresearch\.com/,
     /amazon-adsystem\.com/,/secure\.adnxs\.com/,/ib\.adnxs\.com/,
+    // ── NL-kritisch: overheid & enterprise analytics ──
+    /piwik\.pro/,/\.piwik\.pro/,/piwikpro\.com/,/ppms\.php/,/ppms\.js/,
+    /matomo\.php/,/piwik\.php/,/matomo\.cloud/,/\.matomo\.cloud/,
+    /\.sc\.omtrdc\.net/,/\/b\/ss\//,/data\.adobedc\.net/,/\.adobedc\.net/,
+    /tt\.omtrdc\.net/,/demdex\.net/,/everesttech\.net/,
+    /collector\.[^/]*snplow/,/snowplowanalytics/,/sp\.pixel/,
+    /tags\.tiqcdn\.com/,/collect\.tealiumiq\.com/,/\.tealiumiq\.com/,
+    /contentsquare\.net/,/contentsquare\.com/,
+    /leadinfo\.net/,/snitcher\.com/,
   ];
 
   var BLOCKED_SCRIPTS = [
@@ -109,7 +118,25 @@
     return false;
   }
 
-  function ep() { return WALL_URL + '/proxy/generic?_wk=' + encodeURIComponent(API_KEY); }
+  // Vendor routing: Piwik PRO and Adobe get dedicated strip-proxies that
+  // anonymise their specific PII fields; everything else hits /proxy/generic.
+  var PIWIK_RE = /(piwik\.pro|piwikpro\.com|ppms\.php|matomo\.php|piwik\.php|matomo\.cloud)/i;
+  var ADOBE_RE = /(\.sc\.omtrdc\.net|\/b\/ss\/|adobedc\.net|tt\.omtrdc\.net)/i;
+  function routeFor(url) {
+    var u = String(url || '');
+    if (PIWIK_RE.test(u)) return '/proxy/piwik';
+    if (ADOBE_RE.test(u)) return '/proxy/adobe';
+    return '/proxy/generic';
+  }
+
+  // ep(origUrl): build the Wall proxy endpoint. When origUrl is given (the real
+  // tracker URL), pass it as _orig so the strip-proxy can forward it cleanly.
+  function ep(origUrl) {
+    var route = routeFor(origUrl);
+    var base = WALL_URL + route + '?_wk=' + encodeURIComponent(API_KEY);
+    if (origUrl) base += '&_orig=' + encodeURIComponent(String(origUrl).slice(0, 2000));
+    return base;
+  }
 
   function safeDispatch(name, detail) {
     try { D.dispatchEvent(new CustomEvent('wall:' + name, { detail: detail || {}, bubbles: false })); } catch(e) {}
@@ -130,9 +157,9 @@
     return Promise.race([promise, timeout]);
   }
 
-  function wallFetch(body, attempt) {
+  function wallFetch(body, attempt, origUrl) {
     attempt = attempt || 1;
-    var fetchPromise = _origFetch.call(W, ep(), {
+    var fetchPromise = _origFetch.call(W, ep(origUrl), {
       method: 'POST',
       body: body || null,
       keepalive: true,
@@ -177,7 +204,7 @@
     var safeInit = { credentials: 'omit', headers: { 'x-wall-key': API_KEY, 'x-wall-v': VERSION } };
     if (init && init.body) safeInit.body = init.body;
     if (init && init.method) safeInit.method = init.method;
-    return wallFetch(safeInit.body).catch(function(){
+    return wallFetch(safeInit.body, 1, url).catch(function(){
       // Als wallFetch faalt, fail-open
       return _origFetch.apply(W, [input, init]);
     });
@@ -213,7 +240,7 @@
       this._wallActive = true;
       _stats.blocked++;
       safeDispatch('blocked', { url: this._wallUrl.split('?')[0], via: 'xhr' });
-      return _xOpen.call(this, method, ep(), async !== undefined ? async : true);
+      return _xOpen.call(this, method, ep(this._wallUrl), async !== undefined ? async : true);
     }
     return _xOpen.apply(this, arguments);
   };
@@ -249,9 +276,9 @@
         safeDispatch('fail-open', { via: 'beacon' });
         return _origBeacon(url, data);
       }
-      try { return _origBeacon(ep(), data); }
+      try { return _origBeacon(ep(url), data); }
       catch(e) {
-        wallFetch(data).catch(function(){
+        wallFetch(data, 1, url).catch(function(){
           try { _origBeacon(url, data); } catch(e2) {}
         });
         return true;
@@ -459,6 +486,40 @@
   } catch(e) {
     W.__WALL__ = _wallStatus;
   }
+
+  // ── 12b. First-party analytics beacon (PARAMANT CORE) ─────────
+  // Cookieless pageview to Wall's /collect. No cookie, no localStorage, no
+  // fingerprint. Everything identifying is stripped + k-anonymised server-side.
+  (function() {
+    function beacon(name, props) {
+      try {
+        var payload = JSON.stringify({
+          e: name || 'pageview',
+          u: W.location.pathname + W.location.search,
+          r: D.referrer ? (function(){ try { return new URL(D.referrer).origin; } catch(e){ return ''; } })() : '',
+          p: props || {}
+        });
+        if (N.sendBeacon) {
+          N.sendBeacon(WALL_URL + '/collect', new Blob([payload], { type: 'application/json' }));
+          return;
+        }
+        fetch(WALL_URL + '/collect', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: payload, credentials: 'omit', keepalive: true, mode: 'cors'
+        }).catch(function(){});
+      } catch(e) {}
+    }
+    beacon('pageview');
+    var _push = W.history && W.history.pushState;
+    if (_push) {
+      W.history.pushState = function() { _push.apply(this, arguments); beacon('pageview'); };
+      W.addEventListener('popstate', function() { beacon('pageview'); });
+    }
+    // public custom-event API: window.wall('signup', {plan:'pro'})
+    try {
+      Object.defineProperty(W, 'wall', { value: beacon, writable: false, configurable: false });
+    } catch(e) { W.wall = beacon; }
+  })();
 
   // ── 13. Ready + dev logging ───────────────────────────────────
   safeDispatch('ready', { version: VERSION, patterns: INTERCEPT.length });

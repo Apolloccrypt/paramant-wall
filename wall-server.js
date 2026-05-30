@@ -13,7 +13,7 @@ const crypto  = require('crypto');
 const path    = require('path');
 
 const PORT    = parseInt(process.env.PORT) || 4000;
-const VERSION = '3.3.0';
+const VERSION = '4.2.0';
 const BASE    = process.env.WALL_BASE_URL || 'https://wall.paramant.app';
 const IS_PROD = process.env.NODE_ENV === 'production';
 
@@ -39,6 +39,18 @@ const Redis    = require('redis');
 const { Pool } = require('pg');
 
 const { BUILT_IN_TRACKERS, TEMPLATES, TRACKER_CATEGORIES, getTrackerAction } = require('./trackers');
+
+// ── PARAMANT CORE ────────────────────────────────────────────────
+// The anonymisation engine. Each worker holds its own RAM-only salt + buffers.
+// (Per-worker is fine: tokens only need to be consistent within one request's
+//  lifetime, and k-anon buckets aggregate independently per worker.)
+const { createCore } = require('./core');
+const core = createCore({ k: parseInt(process.env.WALL_K, 10) || 5 });
+
+// Attestation: signs unforgeable proof that a domain routes through this Wall.
+const { Attestor } = require('./core/attest');
+const attestor = new Attestor();
+
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || '');
 const app = express();
 app.disable('x-powered-by');
@@ -272,21 +284,20 @@ function verifyToken(token) {
 function sha256(str) {
   return crypto.createHash('sha256').update(String(str), 'utf8').digest('hex');
 }
+// ── Anonymisation (PARAMANT CORE) ─────────────────────────────────
+// Legacy note: this used to hash (ip + "wall-2026-4-30"). That salt was
+// PREDICTABLE and brute-forceable. It is now backed by core.anon, whose salt
+// is 32 CSPRNG bytes, RAM-only, and rotates every UTC midnight — yesterday's
+// tokens are unreconstructable by anyone.
 function dailySalt() {
-  const d = new Date();
-  return 'wall-' + d.getUTCFullYear() + '-' + d.getUTCMonth() + '-' + d.getUTCDate();
+  // kept only so any external reference still resolves; not used for hashing
+  return core.anon.state().saltFingerprint;
 }
 function anonymizeIP(ip) {
-  if (!ip) return 'unknown';
-  return sha256(ip.trim() + dailySalt()).slice(0, 16);
+  return core.anon.anonymizeIP(ip);
 }
 function anonymizeUA(ua) {
-  if (!ua) return 'Other';
-  if (/Chrome/i.test(ua))  return 'Chrome';
-  if (/Firefox/i.test(ua)) return 'Firefox';
-  if (/Safari/i.test(ua))  return 'Safari';
-  if (/Edge/i.test(ua))    return 'Edge';
-  return 'Other';
+  return core.anon.anonymizeUA(ua);
 }
 
 // ── Input validation ──────────────────────────────────────────────
@@ -1161,8 +1172,8 @@ app.all('/proxy/ga4', requireCustomer, async function(req, res) {
   const query = {};
   ['v','tid','gtm','en','ep','sid','sct','seg','dl','dr','dt']
     .forEach(function(p) { if (req.query[p]) query[p] = String(req.query[p]).slice(0, 200); });
-  if (req.query.cid)       query.cid       = sha256(req.query.cid + dailySalt()).slice(0, 32);
-  if (req.query.client_id) query.client_id = sha256(req.query.client_id + dailySalt()).slice(0, 32);
+  if (req.query.cid)       query.cid       = core.anon.anonymizeIP(req.query.cid + '|cid');
+  if (req.query.client_id) query.client_id = core.anon.anonymizeIP(req.query.client_id + '|cid');
   query.uip = anonymizeIP(ip);
 
   let body;
@@ -1215,6 +1226,199 @@ app.all('/proxy/meta', requireCustomer, async function(req, res) {
   } catch {
     res.status(502).json({ error: 'upstream_error' });
   }
+});
+
+// ══════════════════════════════════════════════════════════════════
+// FIRST-PARTY ANALYTICS (PARAMANT CORE) — cookieless, k-anonymous
+// The piece the proxy-only Wall never had: customers can drop GA4/Meta
+// entirely and run pure first-party analytics through the same privacy core.
+// ══════════════════════════════════════════════════════════════════
+app.post('/collect', async function(req, res) {
+  // No auth: the beacon is public by nature. We never set a cookie here.
+  const ip = getClientIP(req);
+  const ua = req.headers['user-agent'] || '';
+  const origin = req.headers.origin || '';
+  let originHost = '';
+  try { originHost = new URL(origin).host; } catch (e) { originHost = (req.body && req.body.d) || ''; }
+
+  // Rate-limit per coarse token to stop a single source flooding aggregates.
+  const visitor = core.anon.visitorToken({ ip: ip, ua: ua, origin: originHost });
+  if (!await rateLimit('collect:' + visitor, 240, 60)) {
+    return res.status(204).setHeader('Cache-Control', 'no-store').end();
+  }
+
+  const body = req.body || {};
+  const country = (req.headers['cf-ipcountry'] || req.headers['x-country-code'] || '??');
+  let device = 'desktop';
+  const ul = ua.toLowerCase();
+  if (/(ipad|tablet)/.test(ul)) device = 'tablet';
+  else if (/(mobi|iphone|android.*mobile)/.test(ul)) device = 'mobile';
+  else if (/(bot|crawl|spider|headless)/.test(ul)) device = 'bot';
+
+  core.ingest({
+    visitor: visitor,
+    domain: originHost,
+    origin: originHost,
+    event: typeof body.e === 'string' ? body.e.slice(0, 40) : 'pageview',
+    path: core.anon.scrubUrl(body.u || '/').replace(/^https?:\/\/[^/]+/, '') || '/',
+    referrer: body.r ? core.anon.scrubUrl(body.r) : '',
+    country: /^[A-Za-z]{2}$/.test(country) ? country.toUpperCase() : '??',
+    device: device,
+    props: core.anon.scrubPayload(body.p || {}),
+  });
+
+  // No cookie, ever.
+  res.status(204).setHeader('Cache-Control', 'no-store').end();
+});
+
+// First-party aggregate report (aggregates only — never raw events).
+app.get('/api/native/state', async function(req, res) {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ ok: true, version: VERSION, core: core.state() });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// VENDOR STRIP-PROXIES (PARAMANT CORE)
+// One engine that anonymises ANY tracker before forwarding to its real host.
+// Used by Piwik PRO, Adobe Analytics, and any tracker the snippet routes here.
+// The visitor keeps their privacy; the customer keeps their analytics.
+// ══════════════════════════════════════════════════════════════════
+
+// Strip engine lives in core/strip.js (testable). Thin wrappers bind the core
+// anonymizer so the rest of the route code stays unchanged.
+const { stripTrackerUrl: _stripUrl, stripTrackerBody: _stripBody } = require('./core/strip');
+function stripTrackerUrl(rawUrl, stripFields, visitorToken) {
+  return _stripUrl(core.anon, rawUrl, stripFields, visitorToken);
+}
+function stripTrackerBody(body, stripFields, visitorToken) {
+  return _stripBody(core.anon, body, stripFields, visitorToken);
+}
+
+// Generic vendor strip handler. trackerKey selects the right stripFields.
+async function handleVendorStrip(req, res, trackerKey, upstreamFromReq) {
+  const customer = req.customer;
+  const ip = getClientIP(req);
+  const ua = req.headers['user-agent'] || '';
+  const origin = req.headers.origin || '';
+  let originHost = '';
+  try { originHost = new URL(origin).host; } catch (e) { originHost = ''; }
+  const visitor = core.anon.visitorToken({ ip: ip, ua: ua, origin: originHost });
+
+  const tracker = BUILT_IN_TRACKERS[trackerKey] || { stripFields: [], name: trackerKey };
+  const upstream = upstreamFromReq(req);
+  if (!upstream) {
+    incStats(customer.id, 'blocked');
+    return res.status(200).setHeader('X-Wall', VERSION).json({ ok: true, action: 'dropped', reason: 'no_upstream' });
+  }
+
+  const cleanUrl = stripTrackerUrl(upstream, tracker.stripFields, visitor);
+  let body;
+  if (req.method === 'POST' && req.body) {
+    body = stripTrackerBody(req.body, tracker.stripFields, visitor);
+  }
+
+  // also feed our first-party k-anon analytics so the customer gets a
+  // privacy-clean view even of trackers we forward.
+  try {
+    core.ingest({
+      visitor: visitor,
+      domain: originHost,
+      origin: originHost,
+      event: 'tracker_' + trackerKey,
+      path: '/' + trackerKey,
+      referrer: '',
+      country: (req.headers['cf-ipcountry'] || '??'),
+      device: /mobi|android|iphone/i.test(ua) ? 'mobile' : 'desktop',
+      props: {},
+    });
+  } catch (e) {}
+
+  try {
+    const result = await proxyRequest(
+      cleanUrl,
+      req.method,
+      {
+        'content-type': req.headers['content-type'] || (body ? 'application/json' : 'text/plain'),
+        'user-agent': core.anon.anonymizeUA(ua),
+        'x-forwarded-for': '0.0.0.0', // never leak the real IP upstream
+        'accept': req.headers['accept'] || '*/*',
+      },
+      body
+    );
+    incStats(customer.id, 'strip');
+    return res.status(result.status || 204).setHeader('X-Wall', VERSION).send(result.body || '');
+  } catch (e) {
+    incStats(customer.id, 'blocked');
+    return res.status(502).json({ error: 'upstream_error' });
+  }
+}
+
+// ── Piwik PRO / Matomo strip-proxy ────────────────────────────────
+// Snippet sends the original collector URL in ?_orig= (or X-Wall-Original).
+// Works for logius.piwik.pro, <tenant>.piwik.pro, *.matomo.cloud, etc.
+app.all('/proxy/piwik', requireCustomer, function(req, res) {
+  return handleVendorStrip(req, res, 'piwik_pro', function(r) {
+    return r.query._orig || r.headers['x-wall-original'] || '';
+  });
+});
+
+// ── Adobe Analytics / Target strip-proxy ──────────────────────────
+// Adobe AppMeasurement /b/ss/ + Experience Edge interact calls.
+app.all('/proxy/adobe', requireCustomer, function(req, res) {
+  return handleVendorStrip(req, res, 'adobe_analytics', function(r) {
+    return r.query._orig || r.headers['x-wall-original'] || '';
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ATTESTATION — unforgeable proof for the browser verification extension
+// ══════════════════════════════════════════════════════════════════
+
+// The extension's public key (raw32 base64). Bake this into the extension.
+app.get('/.well-known/paramant-wall-key', function(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.json({ product: 'paramant-wall', alg: 'ed25519', publicKey: attestor.publicKeyB64 });
+});
+
+// Signed attestation that `domain` is an enrolled, active Wall customer.
+// The extension calls this for the site it is inspecting; only domains that
+// actually have an enabled customer get a positive attestation.
+app.get('/.well-known/paramant-wall', async function(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store');
+  const domain = String(req.query.domain || '').toLowerCase()
+    .replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '').slice(0, 255);
+  if (!domain || !/^[a-z0-9][a-z0-9.\-]*[a-z0-9]$/.test(domain)) {
+    return res.status(400).json({ ok: false, error: 'invalid_domain' });
+  }
+
+  // Is this domain enrolled with an ENABLED customer?
+  let enrolled = false;
+  try {
+    const rl = 'attest_rl:' + sha256(getClientIP(req)).slice(0, 16);
+    if (await rateLimit(rl, 120, 60)) {
+      const r = await pg.query(
+        `SELECT 1 FROM projects p
+           JOIN customers c ON c.id = p.customer_id_ref
+          WHERE c.enabled = true
+            AND p.allowed_domains::text ILIKE '%' || $1 || '%'
+          LIMIT 1`, [domain]);
+      enrolled = r.rows.length > 0;
+    }
+  } catch (e) {
+    console.error('[attest] lookup error:', e.code || e.message.slice(0, 40));
+  }
+
+  if (!enrolled) {
+    return res.status(404).json({ ok: false, product: 'paramant-wall', domain: domain, enrolled: false });
+  }
+
+  const att = attestor.attest(domain, {
+    version: VERSION,
+    features: ['cookieless', 'ip-anonymised', 'k-anonymity', 'pii-stripped'],
+  });
+  return res.json(Object.assign({ ok: true, enrolled: true }, att));
 });
 
 // ── Snippet serveren ──────────────────────────────────────────────
@@ -1625,20 +1829,18 @@ REQUIRED_ENV.forEach(function(k) {
 });
 
 app.get('/api/version', function(req, res) {
-  return res.status(404).json({ error: 'not_found' });
-  if (false) {
   res.setHeader('Cache-Control', 'public, max-age=3600');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.json({
     ok: true,
-    server_version: '4.0.0',
+    server_version: VERSION,
     snippet_version: '4.0.0',
     min_snippet:     '3.4.0',
   });
 });
 
 app.get('/health', function(req, res) {
-  res.json({ ok: true });
+  res.json({ ok: true, version: VERSION, core: core.gate.state() });
 });
 
 app.get('/stats', function(req, res) { return res.status(404).json({ error: 'not_found' }); });
